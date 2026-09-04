@@ -49,5 +49,8 @@
   },
   "devDependencies": {
     "vitepress": "^1.6.3"
+  },
+  "bugs": {
+    "url": "https://github.com/jawwadzafar/pi-webfind/issues"
   }
 }
