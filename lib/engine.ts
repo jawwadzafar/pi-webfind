@@ -48,15 +48,22 @@ export function sleep(ms: number, signal?: AbortSignal): Promise<void> {
 	});
 }
 
-function decodeEntities(s: string): string {
+const NAMED_ENTITIES: Record<string, string> = {
+	amp: "&", lt: "<", gt: ">", quot: '"', apos: "'", nbsp: " ", copy: "©", reg: "®", trade: "™",
+	hellip: "…", mdash: "—", ndash: "–", lsquo: "‘", rsquo: "’", ldquo: "“", rdquo: "”",
+	laquo: "«", raquo: "»", times: "×", middot: "·", bull: "•", deg: "°", plusmn: "±", eacute: "é",
+	egrave: "è", agrave: "à", ccedil: "ç", uuml: "ü", ouml: "ö", auml: "ä", szlig: "ß", euro: "€",
+	trade_sup2: "²", dagger: "†", permil: "‰", prime: "′", Prime: "″", larr: "←", rarr: "→", uarr: "↑", darr: "↓", harr: "↔",
+};
+
+export function decodeEntities(s: string): string {
 	return s
 		.replace(/&#x([0-9a-f]+);/gi, (_, h) => String.fromCodePoint(parseInt(h, 16)))
 		.replace(/&#(\d+);/g, (_, d) => String.fromCodePoint(parseInt(d, 10)))
+		.replace(/&([a-zA-Z][a-zA-Z0-9]*);/g, (ent, name: string) => NAMED_ENTITIES[name] ?? ent)
 		.replace(/"/g, '"')
-		.replace(/&#39;|&#x27;|'/g, "'")
 		.replace(/</g, "<")
 		.replace(/>/g, ">")
-		.replace(/&nbsp;/g, " ")
 		.replace(/&/g, "&");
 }
 

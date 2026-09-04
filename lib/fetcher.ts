@@ -4,6 +4,7 @@
  */
 import { createTtlCache } from "./cache.ts";
 import { htmlToText } from "./engine.ts";
+import { htmlToMarkdown } from "./extract.ts";
 import { topPassages } from "./rank.ts";
 import { extractPdf, extractPdfViaPoppler } from "./pdf.ts";
 
@@ -22,6 +23,8 @@ export interface FetchOptions {
 	query?: string;
 	maxChars: number;
 	raw?: boolean;
+	/** "markdown" (default): structure-aware article extraction. "text": legacy flattener. */
+	format?: "markdown" | "text";
 	timeoutMs?: number;
 	headers?: Record<string, string>;
 	waybackEnabled?: boolean;
@@ -260,6 +263,15 @@ function extract(
 	}
 
 	// HTML → readable text
+	const format = opts.format ?? "markdown";
+	if (format === "markdown") {
+		try {
+			const md = htmlToMarkdown(body, url.href, opts.maxChars);
+			if (md.text) return md; // junk check inside; fall through on failure
+		} catch {
+			/* fall through to flattener */
+		}
+	}
 	const { text, truncated } = htmlToText(body, opts.maxChars);
 	if (text.length < 200 && body.length > 5000 && /<app-root|<div id="root"|<div id="app"|ng-app|data-reactroot|__NEXT_DATA__|window\.__INITIAL_STATE__|shreddit|<web-app/i.test(body)) {
 		return {
