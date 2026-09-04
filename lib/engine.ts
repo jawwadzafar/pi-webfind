@@ -16,7 +16,7 @@ import { createDiskBackedCache } from "./cache.ts";
 const UA =
 	"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
 // r.jina.ai blocks fake browser UAs but allows honest tool UAs (opposite of most sites)
-const TOOL_UA = "pi-webfind/0.5 (free web research toolkit for pi coding agent; +https://github.com/jawwadzafar/pi-webfind)";
+import { TOOL_UA } from "./version.ts";
 const TIMEOUT_MS = 15_000;
 
 export interface SearchResult {

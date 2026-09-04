@@ -7,7 +7,7 @@
  */
 import { getJson } from "./apis.ts";
 
-const UA = "pi-webfind/0.5 (free web research toolkit for pi coding agent; +https://github.com/jawwadzafar/pi-webfind)";
+import { TOOL_UA as UA } from "./version.ts";
 
 async function getText(url: string, signal?: AbortSignal, headers?: Record<string, string>): Promise<string> {
 	const timeout = AbortSignal.timeout(20_000);
