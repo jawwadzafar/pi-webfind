@@ -128,17 +128,20 @@ export interface PickedPassage {
  * Pick the passages worth showing for a query within a char budget:
  * document intro first, then top-scoring passages in original order.
  * `total` = passages in the full document (for the "N of M shown" footer).
+ * `passages` = the picked set incl. scores — lets callers re-rank (e.g. deep
+ * mode picks the single best-scoring passage instead of the intro).
  */
 export function topPassages(
 	text: string,
 	query: string,
 	budgetChars = 6000,
 	introChars = 600,
-): { picked: PickedPassage[]; total: number } {
+): { picked: PickedPassage[]; total: number; passages: PickedPassage[] } {
 	const all = splitPassages(text);
-	if (all.length === 0) return { picked: [], total: 0 };
+	if (all.length === 0) return { picked: [], total: 0, passages: [] };
 	if (!query.trim()) {
-		return { picked: [{ heading: all[0].heading, text: text.slice(0, budgetChars), score: 0 }], total: all.length };
+		const introOnly = { heading: all[0].heading, text: text.slice(0, budgetChars), score: 0 };
+		return { picked: [introOnly], total: all.length, passages: [introOnly] };
 	}
 
 	const scored = scorePassages(all, query);
@@ -165,5 +168,5 @@ export function topPassages(
 		.sort((a, b) => a[0] - b[0])
 		.map(([, v]) => v);
 	picked.unshift({ heading: intro.heading, text: intro.text.slice(0, introChars), score: 0 });
-	return { picked, total: all.length };
+	return { picked, total: all.length, passages: picked };
 }

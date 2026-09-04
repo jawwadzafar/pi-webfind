@@ -244,7 +244,8 @@ export default function (pi: ExtensionAPI) {
 				? (params.recency as Recency)
 				: undefined;
 			const engine = params.engine ?? "ddg";
-			const cacheKey = `s:${engine}:${recency ?? ""}:${maxResults}:${params.query}`;
+			const deepN = params.deep === true ? 4 : typeof params.deep === "number" ? Math.min(Math.max(Math.round(params.deep), 1), 8) : 0;
+			const cacheKey = `s:${engine}:${recency ?? ""}:${maxResults}:${params.query}:deep${deepN}`;
 			const run = async () => {
 				if (engine === "multi") {
 					onUpdate?.({ content: [{ type: "text", text: "…" }], details: { status: "querying ddg + brave in parallel…" } });
@@ -282,7 +283,6 @@ export default function (pi: ExtensionAPI) {
 				}
 				const { results, engines, errors } = await run();
 				// deep mode: read top results in parallel, attach query-relevant excerpts
-				const deepN = params.deep === true ? 4 : typeof params.deep === "number" ? Math.min(Math.max(Math.round(params.deep), 1), 8) : 0;
 				if (deepN > 0 && results.length > 0 && !cachedHit) {
 					onUpdate?.({
 						content: [{ type: "text", text: "…" }],
@@ -302,7 +302,18 @@ export default function (pi: ExtensionAPI) {
 									signal,
 								} satisfies FetchOptions);
 								const body = page.text.replace(/\n\n\[\d+ of \d+ passages shown[^\n]*\n?\n?$/, "");
-								const first = body.split("\n\n").find((p) => !/^(via |\[|\d+\.)/.test(p.trim()));
+								// pick the highest-scoring passage (its heading prefix aids the model),
+								// falling back to the intro only when nothing scored above zero
+								const best = (page.passages ?? [])
+									.filter((p) => p.score > 0)
+									.sort((a, b) => b.score - a.score)[0];
+								const first = best
+									? best.heading
+										? `${best.heading}\n${best.text}`
+										: best.text
+									: body
+											.split("\n\n")
+											.find((p) => !/^(via |\[|\d+\.)/.test(p.trim()));
 								if (first && first.trim().length > 80) {
 									(r as Row).excerpt = clip(first.trim().replace(/\n+/g, " "), 500);
 								}

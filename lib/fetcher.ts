@@ -5,7 +5,7 @@
 import { createDiskBackedCache } from "./cache.ts";
 import { htmlToText } from "./engine.ts";
 import { htmlToMarkdown } from "./extract.ts";
-import { topPassages } from "./rank.ts";
+import { topPassages, type PickedPassage } from "./rank.ts";
 import { extractPdf, extractPdfViaPoppler } from "./pdf.ts";
 
 export const UA =
@@ -56,6 +56,8 @@ export interface FetchResult {
 	waybackDate?: string;
 	truncated: boolean;
 	fromCache: boolean;
+	/** ranked passages (incl. scores) from query-aware extraction — set when opts.query was given */
+	passages?: PickedPassage[];
 }
 
 // ------------------------------------------------------------- SSRF guard
@@ -312,7 +314,7 @@ export async function smartFetch(url: string, opts: FetchOptions): Promise<Fetch
 	const wide = opts.query?.trim() && !opts.raw ? Math.max(opts.maxChars * 8, 40_000) : opts.maxChars;
 	const result = await smartFetchRaw(url, { ...opts, maxChars: wide });
 	if (!opts.query?.trim() || opts.raw) return result;
-	const { picked, total } = topPassages(result.text, opts.query, opts.maxChars, 600);
+	const { picked, total, passages } = topPassages(result.text, opts.query, opts.maxChars, 600);
 	if (picked.length === 0) {
 		return { ...result, text: result.text.slice(0, opts.maxChars), truncated: result.text.length > opts.maxChars };
 	}
@@ -321,7 +323,7 @@ export async function smartFetch(url: string, opts: FetchOptions): Promise<Fetch
 	let body = parts.join("\n\n");
 	const truncated = body.length + footer.length > opts.maxChars;
 	if (truncated) body = body.slice(0, Math.max(opts.maxChars - footer.length, 0));
-	return { ...result, text: body + footer, truncated };
+	return { ...result, text: body + footer, truncated, passages };
 }
 
 async function smartFetchRaw(url: string, opts: FetchOptions): Promise<FetchResult> {
