@@ -217,7 +217,10 @@ export default function (pi: ExtensionAPI) {
 			"engine='multi' merges both engines in parallel for best coverage.",
 		promptSnippet: "Free multi-engine web search (DDG + Brave) with recency filter",
 		promptGuidelines: [
-			"Use web_search for general research, then fetch_page on the most promising results to read them in full before answering. When fetching long pages, pass query with what you're looking for — it returns the relevant passages instead of the page head.",
+			"For anything factual or current, search before answering. Run 2-3 searches with different phrasings (add a year, quote the exact error, add 'docs' or 'github') — one query is rarely enough.",
+			"Set deep:true on web_search when you need facts rather than links; use fetch_page with query when you need one page in depth. Cite URLs inline.",
+			"Read at least two independent sources before stating a conclusion. Prefer primary sources (official docs, repos, papers) over aggregators, and say when sources disagree or are thin.",
+			"Results include dates when available — prefer recent ones for fast-moving topics and mention which date you relied on.",
 		],
 		parameters: Type.Object({
 			query: Type.String({ description: "Search query" }),
