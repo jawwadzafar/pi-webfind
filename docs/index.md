@@ -3,6 +3,10 @@ layout: home
 
 hero:
   name: pi-webfind
+  "image": {
+    "src": "/pi-webfind/logo.png",
+    "alt": "pi-webfind"
+  }
   text: Web research for the pi coding agent
   tagline: Claude Code-style WebSearch, query-aware fetching, PDFs, site adapters — 100% free, no API keys, no signups.
   actions:
