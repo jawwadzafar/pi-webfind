@@ -41,6 +41,8 @@ interface Row {
 	url: string;
 	snippet?: string;
 	meta?: string;
+	/** publication date when the engine provides one */
+	date?: string;
 	/** deep mode: query-relevant excerpt fetched from the page itself */
 	excerpt?: string;
 }
@@ -49,7 +51,7 @@ function fmtResults(results: Row[]): string {
 	if (results.length === 0) return "No results found.";
 	return results
 		.map((r, i) => {
-			const lines = [`${i + 1}. ${r.title}`, `   ${r.url}`];
+			const lines = [`${i + 1}. ${r.title}`, `   ${r.url}${r.date ? `  (${r.date})` : ""}`];
 			if (r.meta) lines.push(`   ${r.meta}`);
 			if (r.excerpt) lines.push(`   excerpt: ${clip(r.excerpt, 400)}`);
 			else if (r.snippet) lines.push(`   ${clip(r.snippet, 250)}`);
@@ -140,6 +142,7 @@ function makeRenderers(
 								let line = `    ${t.fg("accent", `${i + 1}. ${clip(r.title, 90)}`)}`;
 								line += `\n       ${t.fg("dim", clip(r.url, 110))}`;
 								if (r.meta) line += `  ${t.fg("muted", clip(r.meta, 80))}`;
+								if (r.date) line += `  ${t.fg("muted", r.date)}`;
 								return line;
 							})
 							.join("\n");

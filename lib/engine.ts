@@ -22,6 +22,8 @@ export interface SearchResult {
 	url: string;
 	snippet: string;
 	engine: string;
+	/** Publication date when the source surface provides one (ISO or human-readable). */
+	date?: string;
 }
 
 // ---------------------------------------------------------------- utilities
@@ -106,13 +108,17 @@ function parseDdgHtml(page: string): SearchResult[] {
 	const snippets = [...page.matchAll(/<a[^>]*class="result__snippet"[^>]*>([\s\S]*?)<\/a>/g)].map(
 		(m) => stripTags(m[1]),
 	);
+	// optional per-result date stamp (html endpoint emits it when the source provides one)
+	const timestamps = [...page.matchAll(/class="result__timestamp"[^>]*>([\s\S]*?)<\/a>/g)].map((m) => stripTags(m[1]));
 	let i = 0;
 	for (const m of page.matchAll(
 		/<a[^>]*class="result__a"[^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/g,
 	)) {
 		const url = unwrapRedirect(m[1]);
 		if (!url) continue;
-		out.push({ title: stripTags(m[2]), url, snippet: snippets[i++] ?? "", engine: "ddg" });
+		const date = timestamps[i]?.trim();
+		out.push({ title: stripTags(m[2]), url, snippet: snippets[i] ?? "", engine: "ddg", ...(date ? { date } : {}) });
+		i++;
 	}
 	return out;
 }
@@ -202,7 +208,11 @@ function parseJinaDdg(md: string): SearchResult[] {
 		if (!url || seen.has(url)) continue;
 		if (/duckduckgo\.com(?!\/l\/)|\/y\.js|bing\.com|\.svg/.test(url)) continue;
 		seen.add(url);
-		out.push({ title, url, snippet: "", engine: "ddg-jina" });
+		// date trails the URL line on html variant ("… 2026-08-20T00:00:00.0000000")
+		const tail = md.slice(m.index, m.index + 1200);
+		const d = tail.match(/\b(20[12]\d-\d{2}-\d{2})(?:T[0-9:.]+)?/);
+		const date = d ? d[1] : undefined;
+		out.push({ title, url, snippet: "", engine: "ddg-jina", ...(date ? { date } : {}) });
 	}
 	return out;
 }
@@ -281,7 +291,13 @@ function parseRssItems(xml: string, engine: string): SearchResult[] {
 		const url = (item.match(/<link>([\s\S]*?)<\/link>/)?.[1] ?? "").trim();
 		const snippet = stripTags(item.match(/<description>([\s\S]*?)<\/description>/)?.[1] ?? "");
 		if (!title || !/^https?:\/\//.test(url)) continue;
-		out.push({ title, url, snippet, engine });
+		const pubRaw = (item.match(/<pubDate>([\s\S]*?)<\/pubDate>/)?.[1] ?? "").trim();
+		let date: string | undefined;
+		if (pubRaw) {
+			const ts = Date.parse(pubRaw);
+			if (!Number.isNaN(ts)) date = new Date(ts).toISOString().slice(0, 10);
+		}
+		out.push({ title, url, snippet, engine, ...(date ? { date } : {}) });
 	}
 	return out;
 }
