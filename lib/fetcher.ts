@@ -2,7 +2,7 @@
  * Smart page fetcher: content-type aware, SSRF-guarded, with automatic
  * Wayback Machine fallback when a site blocks us (401/403/429/503).
  */
-import { createTtlCache } from "./cache.ts";
+import { createDiskBackedCache } from "./cache.ts";
 import { htmlToText } from "./engine.ts";
 import { htmlToMarkdown } from "./extract.ts";
 import { topPassages } from "./rank.ts";
@@ -13,7 +13,7 @@ export const UA =
 // r.jina.ai blocks fake browser UAs but allows honest tool UAs (opposite of most sites)
 const TOOL_UA = "pi-webfind/0.4 (free web research toolkit for pi coding agent; +https://github.com/jawwadzafar/pi-webfind)";
 
-const FETCH_CACHE = createTtlCache(64, 60 * 60 * 1000); // 1h
+const FETCH_CACHE = createDiskBackedCache({ name: "fetch", maxEntries: 256, ttlMs: 60 * 60 * 1000 }); // 1h, survives restarts
 const lastHitByHost = new Map<string, number>();
 const MAX_BYTES = 3 * 1024 * 1024; // read at most 3MB
 const DEFAULT_TIMEOUT = 15_000;

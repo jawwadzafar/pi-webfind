@@ -8,9 +8,11 @@
  *   4. Brave Search HTML scraping       — independent index, good redundancy
  *
  * All engines are scraped with Node's built-in fetch. Requests are
- * rate-limited globally (1 / 1.2s per host) and results are cached
- * in-memory (LRU, 128 entries, 10 min TTL).
+ * rate-limited globally (1 / 1.2s per host) and results are cached on disk
+ * (JSON snapshot under ~/.pi/agent/cache/webfind, 10 min TTL).
  */
+import { createDiskBackedCache } from "./cache.ts";
+
 const UA =
 	"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
 // r.jina.ai blocks fake browser UAs but allows honest tool UAs (opposite of most sites)
@@ -369,29 +371,16 @@ export async function multiSearch(
 
 // -------------------------------------------------------------------- cache
 
-const CACHE_MAX = 128;
 const CACHE_TTL = 10 * 60 * 1000;
-const cache = new Map<string, { at: number; value: SearchResult[] }>();
+const cache = createDiskBackedCache({ name: "search", maxEntries: 256, ttlMs: CACHE_TTL });
 
 export function cacheGet(key: string): SearchResult[] | null {
 	const hit = cache.get(key);
-	if (!hit) return null;
-	if (Date.now() - hit.at > CACHE_TTL) {
-		cache.delete(key);
-		return null;
-	}
-	// LRU refresh
-	cache.delete(key);
-	cache.set(key, hit);
-	return hit.value;
+	return Array.isArray(hit) && hit.length > 0 ? (hit as SearchResult[]) : null;
 }
 
 export function cacheSet(key: string, value: SearchResult[]) {
-	if (cache.size >= CACHE_MAX) {
-		const oldest = cache.keys().next().value;
-		if (oldest) cache.delete(oldest);
-	}
-	cache.set(key, { at: Date.now(), value });
+	if (value.length > 0) cache.set(key, value);
 }
 
 // ----------------------------------------------------- page text extraction

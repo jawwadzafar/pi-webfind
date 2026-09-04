@@ -6,12 +6,12 @@
  *   - GitHub search: 10 req/min unauthenticated
  *   - Hacker News (Algolia): unlimited, no key
  */
-import { createTtlCache } from "./cache.ts";
+import { createDiskBackedCache } from "./cache.ts";
 
 const UA =
 	"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
 const TIMEOUT_MS = 15_000;
-const CACHE = createTtlCache(128, 10 * 60 * 1000);
+const CACHE = createDiskBackedCache({ name: "apis", maxEntries: 256, ttlMs: 10 * 60 * 1000 });
 
 export interface ApiResult {
 	title: string;
