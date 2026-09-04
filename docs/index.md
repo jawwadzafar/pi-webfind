@@ -26,3 +26,7 @@ features:
   - title: Honest by construction
     details: SSRF-guarded, rate-limit-respecting, disk-backed caches, and it tells you when a fetch failed instead of inventing content.
 ---
+
+<div style="margin:3rem auto 1rem;max-width:1152px;padding:0 24px">
+  <video src="https://jawwadzafar.github.io/pi-webfind/demo.mp4" controls muted playsinline style="width:100%;border-radius:12px;border:1px solid #333"></video>
+</div>

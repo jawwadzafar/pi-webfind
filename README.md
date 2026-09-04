@@ -8,6 +8,8 @@ reading, grouped synthesis via `/research`. Zero cost.
 
 Docs: **https://jawwadzafar.github.io/pi-webfind/**
 
+![pi-webfind research session](https://jawwadzafar.github.io/pi-webfind/screenshot.png)
+
 ```bash
 pi install /path/to/pi-webfind                             # local
 pi install git:github.com/jawwadzafar/pi-webfind           # once pushed

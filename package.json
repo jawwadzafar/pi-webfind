@@ -24,7 +24,8 @@
     "extensions": [
       "./extensions"
     ],
-    "image": "https://jawwadzafar.github.io/pi-webfind/screenshot.png"
+    "image": "https://jawwadzafar.github.io/pi-webfind/screenshot.png",
+    "video": "https://jawwadzafar.github.io/pi-webfind/demo.mp4"
   },
   "peerDependencies": {
     "@earendil-works/pi-coding-agent": "*",
