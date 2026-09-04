@@ -43,6 +43,7 @@ interface SeItem {
 	tags?: string[];
 	excerpt?: string;
 	creation_date: number;
+	question_id: number;
 }
 
 export async function searchStackOverflow(
@@ -192,6 +193,7 @@ interface HnHit {
 	story_text?: string | null;
 	comment_text?: string | null;
 	created_at: string;
+	story_title?: string | null;
 }
 
 export async function searchHackerNews(

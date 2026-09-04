@@ -342,11 +342,12 @@ export async function multiSearch(
 	const engines: string[] = [];
 	const errors: string[] = [];
 	settled.forEach((r, i) => {
+		const idx = i as number;
 		if (r.status === "fulfilled" && r.value.length > 0) {
-			namedBuckets.push({ name: attempts[i].name, rows: r.value });
-			engines.push(attempts[i].name);
+			namedBuckets.push({ name: attempts[idx]!.name, rows: r.value });
+			engines.push(attempts[idx]!.name);
 		} else if (r.status === "rejected") {
-			errors.push(`${attempts[i].name}: ${(r.reason as Error)?.message ?? r.reason}`);
+			errors.push(`${attempts[idx]!.name}: ${(r.reason as Error)?.message ?? r.reason}`);
 		}
 	});
 	// reciprocal rank fusion (RRF, k=60) — consensus hits across engines rank higher, dedupe by normalized URL
@@ -367,6 +368,8 @@ export async function multiSearch(
 		.slice(0, maxResults)
 		.map((e) => ({ ...e.r, engines: [...e.engines] }) as SearchResult & { engines?: string[] });
 	if (merged.length > 0) return { results: merged, engines, errors };
+	// every bucket empty/rejected — return the (empty) outcome instead of undefined
+	return { results: [], engines, errors };
 }
 
 // -------------------------------------------------------------------- cache

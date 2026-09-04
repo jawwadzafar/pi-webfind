@@ -31,6 +31,8 @@ export interface FetchOptions {
 	noCache?: boolean;
 	/** Return 4xx/5xx responses (with body) instead of throwing — useful for API status checks (e.g. 404 = name available). */
 	allowHttpErrors?: boolean;
+	/** opt out of the r.jina.ai reader fallback for this call (default: enabled) */
+	jinaEnabled?: boolean;
 	signal?: AbortSignal;
 }
 

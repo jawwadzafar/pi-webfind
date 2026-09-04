@@ -36,6 +36,7 @@ const MAX = (n?: number, dflt = 8, cap = 20) => Math.min(Math.max(n ?? dflt, 1),
 const clip = (s: string, n: number) => (s.length > n ? s.slice(0, n - 1) + "…" : s);
 const secs = (ms: number) => `${(ms / 1000).toFixed(1)}s`;
 
+/** Display row — structurally accepts SearchResult (engine rows) and ApiResult (API rows). */
 interface Row {
 	title: string;
 	url: string;
@@ -43,6 +44,10 @@ interface Row {
 	meta?: string;
 	/** publication date when the engine provides one */
 	date?: string;
+	/** "indexed" = crawl stamp (e.g. Bing pubDate), not a publication date */
+	dateKind?: "published" | "indexed";
+	/** every engine that returned this URL (set by multiSearch fusion) */
+	engines?: string[];
 	/** deep mode: query-relevant excerpt fetched from the page itself */
 	excerpt?: string;
 }
@@ -323,7 +328,7 @@ export default function (pi: ExtensionAPI) {
 						}),
 					);
 				}
-				if (results.length > 0) cacheSet(cacheKey, results);
+				if (results.length > 0) cacheSet(cacheKey, results as SearchResult[]); // Row ⊇ SearchResult display-wise; cache widened in WP-04
 				return {
 					content: [
 						{
