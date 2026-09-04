@@ -1,5 +1,5 @@
 /**
- * pi-web-search-free — the complete free web toolkit for pi.
+ * pi-webfind — the complete free web toolkit for pi.
  * No API keys, no paid services, zero runtime dependencies.
  *
  * Tools (7): web_search, fetch_page, search_stackoverflow, search_wikipedia,
@@ -538,7 +538,7 @@ export default function (pi: ExtensionAPI) {
 				for (const r of s.rows) {
 					try {
 						const host = new URL(r.url).host;
-						if (seenHosts.has(host) || /duckduckgo|brave\.com|reddit\.com|medium\.com\/@/.test(host)) continue;
+						if (seenHosts.has(host) || /duckduckgo|brave.com|reddit.com|medium.com/.test(host)) continue;
 						seenHosts.add(host);
 						picked.push({ url: r.url, title: r.title });
 						if (picked.length >= 3) break;

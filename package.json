@@ -17,7 +17,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/jawwadzafar/pi-web-search-free.git"
+    "url": "git+https://github.com/jawwadzafar/pi-webfind.git"
   },
   "pi": {
     "extensions": [

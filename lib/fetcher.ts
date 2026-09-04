@@ -33,7 +33,7 @@ export interface FetchResult {
 	status: number;
 	finalUrl: string;
 	contentType: string;
-	source: "direct" | "wayback";
+	source: "direct" | "wayback" | "jina" | "github-api" | "reddit-json" | "so-api" | "hn-api" | "arxiv-pdf" | "markdown";
 	waybackDate?: string;
 	truncated: boolean;
 	fromCache: boolean;
