@@ -1,0 +1,28 @@
+---
+layout: home
+
+hero:
+  name: pi-webfind
+  text: Web research for the pi coding agent
+  tagline: Claude Code-style WebSearch, query-aware fetching, PDFs, site adapters — 100% free, no API keys, no signups.
+  actions:
+    - theme: brand
+      text: Get started
+      link: /guide/getting-started
+    - theme: alt
+      text: Tool reference
+      link: /guide/tools
+    - theme: alt
+      text: GitHub
+      link: https://github.com/jawwadzafar/pi-webfind
+
+features:
+  - title: Search without keys
+    details: DuckDuckGo, Brave and Bing RSS with reciprocal-rank fusion; automatic fallbacks when engines fight back.
+  - title: Read with comprehension
+    details: fetch_page takes a query — BM25-ranked passages instead of the page head. web_search deep mode attaches excerpts to results.
+  - title: Markdown, not soup
+    details: Density-scored article detection converts pages to structured markdown. Site adapters route GitHub, Stack Overflow, HN, Reddit and Wikipedia to their clean free APIs.
+  - title: Honest by construction
+    details: SSRF-guarded, rate-limit-respecting, disk-backed caches, and it tells you when a fetch failed instead of inventing content.
+---

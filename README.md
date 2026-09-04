@@ -6,6 +6,8 @@ Same muscle memory as Claude Code's WebSearch: `⏺ Web Search("query")` headers
 live status, `✓ 8 results · ddg+brave · 2.1s`, expandable results, document
 reading, grouped synthesis via `/research`. Zero cost.
 
+Docs: **https://jawwadzafar.github.io/pi-webfind/**
+
 ```bash
 pi install /path/to/pi-webfind                             # local
 pi install git:github.com/jawwadzafar/pi-webfind           # once pushed
