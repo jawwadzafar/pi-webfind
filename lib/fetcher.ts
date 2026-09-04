@@ -20,6 +20,8 @@ export interface FetchOptions {
 	headers?: Record<string, string>;
 	waybackEnabled?: boolean;
 	noCache?: boolean;
+	/** Return 4xx/5xx responses (with body) instead of throwing — useful for API status checks (e.g. 404 = name available). */
+	allowHttpErrors?: boolean;
 	signal?: AbortSignal;
 }
 
@@ -224,9 +226,19 @@ export async function smartFetch(url: string, opts: FetchOptions): Promise<Fetch
 					FETCH_CACHE.set(cacheKey, wb);
 					return wb;
 				}
+				if (opts.allowHttpErrors) {
+					const { text, truncated } = extract(safeUrl, res.headers.get("content-type") ?? "", bodyText, opts);
+					return { text, status: res.status, finalUrl: res.url || safeUrl.href, contentType: res.headers.get("content-type") ?? "", source: "direct", truncated, fromCache: false };
+				}
 				throw new Error(`HTTP ${res.status}${res.status === 403 ? " (bot protection?)" : ""}`);
 			}
-			if (!res.ok) throw new Error(`HTTP ${res.status}`);
+			if (!res.ok) {
+				if (opts.allowHttpErrors) {
+					const { text, truncated } = extract(safeUrl, res.headers.get("content-type") ?? "", bodyText, opts);
+					return { text, status: res.status, finalUrl: res.url || safeUrl.href, contentType: res.headers.get("content-type") ?? "", source: "direct", truncated, fromCache: false };
+				}
+				throw new Error(`HTTP ${res.status}`);
+			}
 			const { text, truncated } = extract(safeUrl, res.headers.get("content-type") ?? "", bodyText, opts);
 			const out: FetchResult = {
 				text,

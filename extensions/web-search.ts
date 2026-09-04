@@ -151,6 +151,12 @@ export default function (pi: ExtensionAPI) {
 			),
 			no_cache: Type.Optional(Type.Boolean({ description: "Skip the 1-hour cache" })),
 			no_wayback: Type.Optional(Type.Boolean({ description: "Disable Wayback Machine fallback" })),
+			allow_http_errors: Type.Optional(
+				Type.Boolean({
+					description:
+						"Return 4xx/5xx responses (with body) instead of throwing. Use for API status checks, e.g. crates.io/npm 404 = name available.",
+				}),
+			),
 		}),
 		async execute(_id, params, signal) {
 			try {
@@ -160,6 +166,7 @@ export default function (pi: ExtensionAPI) {
 					timeoutMs: params.timeout ? Math.min(Math.max(params.timeout, 1000), 60_000) : undefined,
 					headers: params.headers as Record<string, string> | undefined,
 					waybackEnabled: !params.no_wayback,
+					allowHttpErrors: params.allow_http_errors,
 					signal,
 				} satisfies FetchOptions);
 				const tags = [
