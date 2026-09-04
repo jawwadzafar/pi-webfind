@@ -11,7 +11,7 @@ import { extractPdf, extractPdfViaPoppler } from "./pdf.ts";
 export const UA =
 	"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
 // r.jina.ai blocks fake browser UAs but allows honest tool UAs (opposite of most sites)
-const TOOL_UA = "pi-webfind/0.4 (free web research toolkit for pi coding agent; +https://github.com/jawwadzafar/pi-webfind)";
+const TOOL_UA = "pi-webfind/0.5 (free web research toolkit for pi coding agent; +https://github.com/jawwadzafar/pi-webfind)";
 
 const FETCH_CACHE = createDiskBackedCache({ name: "fetch", maxEntries: 256, ttlMs: 60 * 60 * 1000 }); // 1h, survives restarts
 const lastHitByHost = new Map<string, number>();
