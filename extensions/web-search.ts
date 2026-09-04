@@ -507,7 +507,7 @@ export default function (pi: ExtensionAPI) {
 			};
 
 			setStatus("researching…");
-			setWidget([`① searching: "${topic}"`]);
+			setWidget([`searching: "${topic}"`]);
 
 			const sources: Array<{ kind: string; rows: Row[] }> = [];
 			const steps: string[] = [];
@@ -521,7 +521,7 @@ export default function (pi: ExtensionAPI) {
 				} catch (e: any) {
 					steps.push(`✗ ${kind}: ${clip(String(e?.message ?? e), 60)}`);
 				}
-				setWidget([`② gathering sources…`, ...steps]);
+				setWidget([`gathering sources…`, ...steps]);
 			};
 
 			await push("web", () => multiSearch(topic, 6, undefined).then((r) => r.results));
@@ -531,7 +531,7 @@ export default function (pi: ExtensionAPI) {
 
 			// fetch top pages (diverse hosts, skip search-engines/aggregators)
 			setStatus("fetching top pages…");
-			setWidget([...steps, "③ fetching top pages…"]);
+			setWidget([...steps, "fetching top pages…"]);
 			const seenHosts = new Set<string>();
 			const picked: Array<{ url: string; title: string }> = [];
 			for (const s of sources.filter((x) => x.kind === "web")) {
@@ -579,7 +579,7 @@ export default function (pi: ExtensionAPI) {
 - Cite only what appears above; if sources are thin, say so.`;
 
 			pi.sendUserMessage(material);
-			setWidget([...steps, "④ handed to model for synthesis"]);
+			setWidget([...steps, "handed to model for synthesis"]);
 			setStatus(`done · ${steps.length} steps`);
 			setTimeout(() => {
 				try {
