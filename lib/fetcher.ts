@@ -4,6 +4,7 @@
  */
 import { createTtlCache } from "./cache.ts";
 import { htmlToText } from "./engine.ts";
+import { extractPdf, extractPdfViaPoppler } from "./pdf.ts";
 
 export const UA =
 	"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
@@ -95,7 +96,7 @@ async function rawFetch(
 	url: URL,
 	opts: FetchOptions,
 	extraHeaders: Record<string, string> = {},
-): Promise<{ res: Response; bodyText: string }> {
+): Promise<{ res: Response; bodyText: string; bytes: Buffer }> {
 	const timeout = AbortSignal.timeout(opts.timeoutMs ?? DEFAULT_TIMEOUT);
 	const combined = opts.signal ? AbortSignal.any([opts.signal, timeout]) : timeout;
 	await politeDelay(url.host, opts.signal);
@@ -113,8 +114,9 @@ async function rawFetch(
 	const len = Number(res.headers.get("content-length") ?? 0);
 	if (len > MAX_BYTES) throw new Error(`Response too large: ${(len / 1e6).toFixed(1)}MB`);
 	const buf = await res.arrayBuffer();
-	const bodyText = new TextDecoder("utf-8", { fatal: false }).decode(buf.slice(0, MAX_BYTES));
-	return { res, bodyText };
+	const bytes = Buffer.from(buf);
+	const bodyText = new TextDecoder("utf-8", { fatal: false }).decode(bytes.subarray(0, MAX_BYTES));
+	return { res, bodyText, bytes };
 }
 
 // -------------------------------------------------------------- wayback
@@ -136,9 +138,9 @@ async function waybackFetch(
 		const snap = data.archived_snapshots?.closest;
 		if (!snap) return null;
 		const snapUrl = new URL(snap.url);
-		const { res: sres, bodyText } = await rawFetch(snapUrl, opts);
+		const { res: sres, bodyText, bytes: bytes2 } = await rawFetch(snapUrl, opts);
 		if (!sres.ok) return null;
-		const { text, truncated } = extract(snapUrl, sres.headers.get("content-type") ?? "", bodyText, opts);
+		const { text, truncated } = extract(snapUrl, sres.headers.get("content-type") ?? "", bodyText, opts, bytes2);
 		return {
 			text,
 			status: 200,
@@ -157,14 +159,30 @@ async function waybackFetch(
 // -------------------------------------------------------------- extraction
 
 const BINARY_TYPES = /^(image\/|video\/|audio\/|application\/(zip|gzip|x-tar|pdf|octet-stream|wasm|sqlite))/;
-
 function extract(
 	url: URL,
 	contentType: string,
 	body: string,
 	opts: FetchOptions,
+	bytes?: Buffer,
 ): { text: string; truncated: boolean } {
 	const ct = contentType.split(";")[0].trim().toLowerCase();
+
+	// PDF → text extraction (poppler if installed, else internal parser)
+	if (bytes && (ct === "application/pdf" || /\.pdf($|\?)/i.test(url.pathname))) {
+		try {
+			const pdfText = extractPdfSync(bytes);
+			if (pdfText) {
+				const collapsed = pdfText.replace(/\n{3,}/g, "\n\n");
+				return { text: collapsed.slice(0, opts.maxChars), truncated: collapsed.length > opts.maxChars };
+			}
+		} catch {
+			return {
+				text: `[PDF detected (${bytes.length} bytes) but text extraction failed — likely scanned/image-only or encrypted]`,
+				truncated: false,
+			};
+		}
+	}
 
 	// Binary content: metadata only
 	if (BINARY_TYPES.test(ct)) {
@@ -219,7 +237,7 @@ export async function smartFetch(url: string, opts: FetchOptions): Promise<Fetch
 	let lastErr: unknown;
 	for (let attempt = 0; attempt < 3; attempt++) {
 		try {
-			const { res, bodyText } = await rawFetch(safeUrl, opts);
+			const { res, bodyText, bytes } = await rawFetch(safeUrl, opts);
 			if ([401, 403, 429, 503].includes(res.status)) {
 				const wb = await waybackFetch(safeUrl, opts);
 				if (wb) {
@@ -227,19 +245,19 @@ export async function smartFetch(url: string, opts: FetchOptions): Promise<Fetch
 					return wb;
 				}
 				if (opts.allowHttpErrors) {
-					const { text, truncated } = extract(safeUrl, res.headers.get("content-type") ?? "", bodyText, opts);
+					const { text, truncated } = extract(safeUrl, res.headers.get("content-type") ?? "", bodyText, opts, bytes);
 					return { text, status: res.status, finalUrl: res.url || safeUrl.href, contentType: res.headers.get("content-type") ?? "", source: "direct", truncated, fromCache: false };
 				}
 				throw new Error(`HTTP ${res.status}${res.status === 403 ? " (bot protection?)" : ""}`);
 			}
 			if (!res.ok) {
 				if (opts.allowHttpErrors) {
-					const { text, truncated } = extract(safeUrl, res.headers.get("content-type") ?? "", bodyText, opts);
+					const { text, truncated } = extract(safeUrl, res.headers.get("content-type") ?? "", bodyText, opts, bytes);
 					return { text, status: res.status, finalUrl: res.url || safeUrl.href, contentType: res.headers.get("content-type") ?? "", source: "direct", truncated, fromCache: false };
 				}
 				throw new Error(`HTTP ${res.status}`);
 			}
-			const { text, truncated } = extract(safeUrl, res.headers.get("content-type") ?? "", bodyText, opts);
+			const { text, truncated } = extract(safeUrl, res.headers.get("content-type") ?? "", bodyText, opts, bytes);
 			const out: FetchResult = {
 				text,
 				status: res.status,
@@ -264,3 +282,66 @@ export async function smartFetch(url: string, opts: FetchOptions): Promise<Fetch
 }
 
 export { decodeEntities };
+
+/** Sync wrapper: run the async extractor synchronously via spawnSync for poppler, zlib for internal. */
+import { spawnSync } from "node:child_process";
+import { inflateSync as _is, inflateRawSync as _irs } from "node:zlib";
+
+function extractPdfSync(bytes: Buffer): string | null {
+	// poppler first (installed on this machine)
+	const pdftotext = spawnSync("pdftotext", ["-", "-"], { input: bytes, maxBuffer: 20 * 1024 * 1024, timeout: 20_000 });
+	if (pdftotext.status === 0 && pdftotext.stdout && pdftotext.stdout.toString().trim().length > 0) {
+		return pdftotext.stdout.toString();
+	}
+	// internal: inflate FlateDecode streams + parse text operators (sync zlib)
+	try {
+		const streams = findStreamsInternal(bytes);
+		const chunks: string[] = [];
+		for (const st of streams) {
+			if (/\/Filter\s*\[^\]]*FlateDecode/i.test(st.dict) || /\/Filter\s*\/Fl\b/i.test(st.dict)) {
+				try {
+					chunks.push(_is(bytes.subarray(st.start, st.end)).toString("latin1"));
+				} catch {
+					try { chunks.push(_irs(bytes.subarray(st.start, st.end)).toString("latin1")); } catch { /* skip */ }
+				}
+			} else if (!/\/Filter/.test(st.dict)) {
+				chunks.push(bytes.subarray(st.start, st.end).toString("latin1"));
+			}
+		}
+		if (chunks.length === 0) return null;
+		// reuse operator parser from pdf.ts via dynamic import is async; inline a simple regex pass:
+		const all = chunks.join("\n");
+		const lines: string[] = [];
+		for (const m of all.matchAll(/\((?:\\.|[^\\()])*\)\s*Tj|\[(?:[^\][]|\\.)*\]\s*TJ/g)) {
+			for (const sm of m[0].matchAll(/\((?:\\.|[^\\()])*\)/g)) {
+				lines.push(sm[0].slice(1, -1).replace(/\\([nrtbf])/g, (_x, c) => ({ n: "\n", r: "\r", t: "\t", b: "\b", f: "\f" } as Record<string, string>)[c] ?? c).replace(/\\([0-7]{1,3})/g, (_x, o) => String.fromCharCode(parseInt(o, 8))).replace(/\\(.)/g, "$1"));
+			}
+		}
+		if (lines.length === 0) return null;
+		return lines.join("\n").replace(/\n{3,}/g, "\n\n").trim();
+	} catch {
+		return null;
+	}
+}
+
+function findStreamsInternal(data: Buffer): Array<{ dict: string; start: number; end: number }> {
+	const streams: Array<{ dict: string; start: number; end: number }> = [];
+	const latin = data.toString("latin1");
+	let pos = 0;
+	while (true) {
+		const s = latin.indexOf("stream", pos);
+		if (s === -1) break;
+		if ((s === 0 || !/[a-zA-Z]/.test(latin[s - 1])) && !latin.startsWith("endstream", s)) {
+			const dictStart = latin.lastIndexOf("<<", s);
+			const dict = dictStart >= 0 ? latin.slice(Math.max(dictStart, s - 600), s) : "";
+			let body = s + 6;
+			if (latin[body] === "\r") body++;
+			if (latin[body] === "\n") body++;
+			const e = latin.indexOf("endstream", body);
+			if (e === -1) break;
+			streams.push({ dict, start: body, end: e });
+			pos = e + 9;
+		} else pos = s + 6;
+	}
+	return streams;
+}

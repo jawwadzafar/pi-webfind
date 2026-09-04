@@ -2,16 +2,16 @@
  * pi-web-search-free — the complete free web toolkit for pi.
  * No API keys, no paid services, zero runtime dependencies.
  *
- * Tools:
- *   web_search          multi-engine search (DDG ×3 + Brave, merged)
- *   fetch_page          smart page fetch (extraction, wayback fallback, SSRF guard)
- *   search_stackoverflow  programming Q&A (Stack Exchange API)
- *   search_wikipedia      encyclopedia (MediaWiki API)
- *   search_npm            JS package registry
- *   search_github         repos via GitHub API
- *   search_hn             Hacker News (Algolia API)
+ * Tools (7): web_search, fetch_page, search_stackoverflow, search_wikipedia,
+ *            search_npm, search_github, search_hn
+ * Command:   /research <topic>  — multi-source research with live progress
+ *
+ * Claude Code-style UX: compact colored tool headers, live status while
+ * running, expanded result views, durations and engine attribution.
  */
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import { keyHint } from "@earendil-works/pi-coding-agent";
+import { Text } from "@earendil-works/pi-tui";
 import { Type } from "typebox";
 import {
 	braveSearch,
@@ -32,18 +32,154 @@ import {
 import { smartFetch, type FetchOptions } from "../lib/fetcher.ts";
 
 const MAX = (n?: number, dflt = 8, cap = 20) => Math.min(Math.max(n ?? dflt, 1), cap);
+const clip = (s: string, n: number) => (s.length > n ? s.slice(0, n - 1) + "…" : s);
+const secs = (ms: number) => `${(ms / 1000).toFixed(1)}s`;
 
-function fmtResults(results: Array<{ title: string; url: string; snippet?: string; meta?: string }>): string {
+interface Row {
+	title: string;
+	url: string;
+	snippet?: string;
+	meta?: string;
+}
+
+function fmtResults(results: Row[]): string {
 	if (results.length === 0) return "No results found.";
 	return results
 		.map((r, i) => {
 			const lines = [`${i + 1}. ${r.title}`, `   ${r.url}`];
 			if (r.meta) lines.push(`   ${r.meta}`);
-			if (r.snippet) lines.push(`   ${r.snippet.slice(0, 250)}`);
+			if (r.snippet) lines.push(`   ${clip(r.snippet, 250)}`);
 			return lines.join("\n");
 		})
 		.join("\n\n");
 }
+
+// ------------------------------------------------------------- TUI rendering
+
+interface Theme {
+	fg(color: string, text: string): string;
+	bold(text: string): string;
+	dim(text: string): string;
+}
+
+/** Header line like Claude Code's `⏺ Web Search("query")` */
+function toolHeader(theme: Theme, tool: string, detail: string): string {
+	return theme.fg("toolTitle", theme.bold(tool)) + theme.fg("dim", `(${JSON.stringify(clip(detail, 70))})`);
+}
+
+/** Compact one-line success summary + keyHint to expand */
+function statusLine(
+	theme: Theme,
+	ok: boolean,
+	summary: string,
+	durationMs?: number,
+	expanded = true,
+): string {
+	let line = ok ? theme.fg("success", "✓ ") : theme.fg("error", "✗ ");
+	line += theme.fg("muted", summary);
+	if (durationMs !== undefined) line += theme.fg("dim", ` · ${secs(durationMs)}`);
+	if (!expanded) line += theme.fg("dim", `  ${keyHint("app.tools.expand", "to expand")}`);
+	return line;
+}
+
+function makeRenderers(toolName: string, argDetail: (args: any) => string, resultSummary: (details: any) => { ok: boolean; text: string }) {
+	return {
+		renderCall(args: any, theme: any, context: any) {
+			const t = theme as Theme;
+			const text = (context.lastComponent as Text | undefined) ?? new Text("", 0, 0);
+			text.setText(toolHeader(t, toolName, argDetail(args ?? {})));
+			return text;
+		},
+		renderResult(result: any, options: { expanded?: boolean; isPartial?: boolean }, theme: any, context: any) {
+			const t = theme as Theme;
+			const text = (context.lastComponent as Text | undefined) ?? new Text("", 0, 0);
+			if (options.isPartial) {
+				const step = result?.details?.status ?? "working…";
+				text.setText(theme.fg("warning", `⏳ ${step}`));
+				return text;
+			}
+			const isError = result?.isError || result?.details?.error;
+			if (isError) {
+				const msg = result?.details?.error ?? result?.content?.[0]?.text ?? "failed";
+				text.setText(theme.fg("error", `✗ ${clip(String(msg), 160)}`));
+				return text;
+			}
+			const { ok, text: summary } = resultSummary(result?.details ?? {});
+			let out = (ok ? t.fg("success", "✓ ") : t.fg("warning", "! ")) + t.fg("muted", summary);
+			const d = result?.details ?? {};
+			if (d.durationMs !== undefined) out += t.fg("dim", ` · ${secs(d.durationMs)}`);
+			if (options.expanded) {
+				const rows: Row[] = d.results ?? [];
+				if (rows.length > 0) {
+					out += "\n" + rows
+						.map((r, i) => {
+							let line = `  ${t.fg("accent", `${i + 1}. ${clip(r.title, 90)}`)}`;
+							line += `\n    ${t.fg("dim", clip(r.url, 110))}`;
+							if (r.meta) line += `  ${t.fg("muted", clip(r.meta, 80))}`;
+							return line;
+						})
+						.join("\n");
+				} else if (d.preview) {
+					out += "\n" + t.fg("dim", clip(String(d.preview), 400));
+				}
+			} else {
+				out += t.fg("dim", `  ${keyHint("app.tools.expand", "to expand")}`);
+			}
+			text.setText(out);
+			return text;
+		},
+	};
+}
+
+// ------------------------------------------------------------------ factory
+
+function registerSearchTool(
+	pi: ExtensionAPI,
+	name: string,
+	label: string,
+	description: string,
+	promptSnippet: string,
+	run: (query: string, max: number, signal?: AbortSignal) => Promise<Row[]>,
+	summary: (details: any) => { ok: boolean; text: string } = (d) => ({
+		ok: true,
+		text: `${d.count ?? 0} results`,
+	}),
+) {
+	pi.registerTool({
+		name,
+		label,
+		description,
+		promptSnippet,
+		parameters: Type.Object({
+			query: Type.String({ description: "Search query" }),
+			max: Type.Optional(Type.Number({ description: "Max results (default 8)" })),
+			no_cache: Type.Optional(Type.Boolean({ description: "Skip the 10-minute cache" })),
+		}),
+		async execute(_id, params, signal, onUpdate) {
+			const started = Date.now();
+			onUpdate?.({
+				content: [{ type: "text", text: `${label}…` }],
+				details: { status: `searching ${JSON.stringify(clip(params.query, 50))}…` },
+			});
+			try {
+				const results = await run(params.query, MAX(params.max), signal);
+				return {
+					content: [{ type: "text", text: fmtResults(results) }],
+					details: { results, count: results.length, durationMs: Date.now() - started },
+				};
+			} catch (err: any) {
+				return {
+					content: [{ type: "text", text: `${label} error: ${err?.message ?? err}` }],
+					details: { error: err?.message ?? String(err), durationMs: Date.now() - started },
+					isError: true,
+				};
+			}
+		},
+		...makeRenderers(label, (args) => args.query ?? "", summary),
+	});
+}
+
+// ------------------------------------------------------------------- setup
 
 export default function (pi: ExtensionAPI) {
 	// ------------------------------------------------------------- web_search
@@ -54,18 +190,19 @@ export default function (pi: ExtensionAPI) {
 			"General web search — free, no API key (DuckDuckGo + Brave). Returns titles, URLs, snippets. " +
 			"Use for news, articles, broad topics. Use fetch_page to read a result in full. " +
 			"engine='multi' merges both engines in parallel for best coverage.",
+		promptSnippet: "Free multi-engine web search (DDG + Brave) with recency filter",
+		promptGuidelines: [
+			"Use web_search for general research, then fetch_page on the most promising results to read them in full before answering.",
+		],
 		parameters: Type.Object({
 			query: Type.String({ description: "Search query" }),
 			max_results: Type.Optional(Type.Number({ description: "Max results, 1-20 (default 8)" })),
-			recency: Type.Optional(
-				Type.String({ description: "d=day, w=week, m=month, y=year (optional)" }),
-			),
-			engine: Type.Optional(
-				Type.String({ description: "ddg (default) | brave | multi (parallel merge)" }),
-			),
+			recency: Type.Optional(Type.String({ description: "d=day, w=week, m=month, y=year (optional)" })),
+			engine: Type.Optional(Type.String({ description: "ddg (default) | brave | multi (parallel merge)" })),
 			refresh: Type.Optional(Type.Boolean({ description: "Skip the 10-minute cache" })),
 		}),
-		async execute(_id, params, signal) {
+		async execute(_id, params, signal, onUpdate) {
+			const started = Date.now();
 			const maxResults = MAX(params.max_results);
 			const recency = (["d", "w", "m", "y"] as const).includes(params.recency as any)
 				? (params.recency as Recency)
@@ -74,13 +211,16 @@ export default function (pi: ExtensionAPI) {
 			const cacheKey = `s:${engine}:${recency ?? ""}:${maxResults}:${params.query}`;
 			const run = async () => {
 				if (engine === "multi") {
+					onUpdate?.({ content: [{ type: "text", text: "…" }], details: { status: "querying ddg + brave in parallel…" } });
 					const r = await multiSearch(params.query, maxResults, recency, signal);
-					return { results: r.results, engines: r.engines, errors: r.errors };
+					return { results: r.results as Row[], engines: r.engines, errors: r.errors };
 				}
 				if (engine === "brave") {
-					return { results: await braveSearch(params.query, maxResults, recency, signal), engines: ["brave"], errors: [] as string[] };
+					onUpdate?.({ content: [{ type: "text", text: "…" }], details: { status: "querying brave…" } });
+					return { results: (await braveSearch(params.query, maxResults, recency, signal)) as Row[], engines: ["brave"], errors: [] as string[] };
 				}
-				return { results: await ddgSearch(params.query, maxResults, recency, signal), engines: ["ddg"], errors: [] as string[] };
+				onUpdate?.({ content: [{ type: "text", text: "…" }], details: { status: "querying duckduckgo…" } });
+				return { results: (await ddgSearch(params.query, maxResults, recency, signal)) as Row[], engines: ["ddg"], errors: [] as string[] };
 			};
 			try {
 				if (!params.refresh) {
@@ -88,18 +228,23 @@ export default function (pi: ExtensionAPI) {
 					if (hit)
 						return {
 							content: [{ type: "text", text: `[cached]\n${fmtResults(hit)}` }],
-							details: { cached: true, results: hit },
+							details: { cached: true, results: hit, count: hit.length, durationMs: Date.now() - started },
 						};
 				}
 				const { results, engines, errors } = await run();
 				if (results.length > 0) cacheSet(cacheKey, results);
-				const header = `[via ${engines.join(" + ")}]${errors.length ? ` (failed: ${errors.join("; ")})` : ""}`;
 				return {
-					content: [{ type: "text", text: `${header}\n\n${fmtResults(results)}` }],
-					details: { engines, errors, results },
+					content: [
+						{
+							type: "text",
+							text: `[via ${engines.join(" + ")}]${errors.length ? ` (failed: ${errors.join("; ")})` : ""}\n\n${fmtResults(results)}`,
+						},
+					],
+					details: { results, count: results.length, engines, errors, durationMs: Date.now() - started },
 				};
 			} catch (err: any) {
 				if (engine !== "multi") {
+					onUpdate?.({ content: [{ type: "text", text: "…" }], details: { status: "primary engine failed — trying multi…" } });
 					try {
 						const r = await multiSearch(params.query, maxResults, recency, signal);
 						if (r.results.length > 0) {
@@ -111,7 +256,7 @@ export default function (pi: ExtensionAPI) {
 										text: `${fmtResults(r.results)}\n\n[primary engine '${engine}' failed: ${err?.message ?? err}]`,
 									},
 								],
-								details: { engines: r.engines, results: r.results },
+								details: { results: r.results, count: r.results.length, engines: r.engines, durationMs: Date.now() - started },
 							};
 						}
 					} catch {
@@ -125,10 +270,19 @@ export default function (pi: ExtensionAPI) {
 							text: `Search error: ${err?.message ?? err}. Engines may be rate-limited — wait a minute or retry with engine='multi', refresh=true.`,
 						},
 					],
-					details: {},
+					details: { error: err?.message ?? String(err), durationMs: Date.now() - started },
+					isError: true,
 				};
 			}
 		},
+		...makeRenderers(
+			"Web Search",
+			(args) => String(args.query ?? ""),
+			(d) => {
+				const eng = (d.engines ?? []).join("+") || (d.cached ? "cache" : "ddg");
+				return { ok: (d.count ?? 0) > 0, text: `${d.count ?? 0} results · ${eng}${d.cached ? " · cached" : ""}` };
+			},
+		),
 	});
 
 	// ------------------------------------------------------------- fetch_page
@@ -137,8 +291,9 @@ export default function (pi: ExtensionAPI) {
 		label: "Fetch Page",
 		description:
 			"Fetch a URL and return readable content. Handles HTML (article extraction, nav/ads stripped), " +
-			"JSON (pretty-printed), plain text; detects binaries. On 401/403/429/503 automatically retries " +
-			"via the Wayback Machine. SSRF-protected. Custom headers supported. Cached 1h.",
+			"JSON (pretty-printed), plain text, and PDFs (text extraction). On 401/403/429/503 automatically " +
+			"retries via the Wayback Machine. SSRF-protected. Custom headers supported. Cached 1h.",
+		promptSnippet: "Fetch a URL → readable text; handles PDFs, JSON, bot-walls (Wayback fallback)",
 		parameters: Type.Object({
 			url: Type.String({ description: "URL to fetch (http/https only)" }),
 			max_chars: Type.Optional(Type.Number({ description: "Max text chars (default 8000, max 50000)" })),
@@ -146,7 +301,7 @@ export default function (pi: ExtensionAPI) {
 			timeout: Type.Optional(Type.Number({ description: "Timeout ms (1000-60000, default 15000)" })),
 			headers: Type.Optional(
 				Type.Record(Type.String(), Type.String(), {
-					description: "Custom headers, e.g. {\"Authorization\": \"Bearer ...\"}",
+					description: 'Custom headers, e.g. {"Authorization": "Bearer ..."}',
 				}),
 			),
 			no_cache: Type.Optional(Type.Boolean({ description: "Skip the 1-hour cache" })),
@@ -158,9 +313,12 @@ export default function (pi: ExtensionAPI) {
 				}),
 			),
 		}),
-		async execute(_id, params, signal) {
+		async execute(_id, params, signal, onUpdate) {
+			const started = Date.now();
 			try {
-		const r = await smartFetch(params.url, {
+				const u = new URL(params.url);
+				onUpdate?.({ content: [{ type: "text", text: "…" }], details: { status: `fetching ${u.host}…` } });
+				const r = await smartFetch(params.url, {
 					maxChars: MAX(params.max_chars, 8000, 50_000),
 					raw: params.raw,
 					timeoutMs: params.timeout ? Math.min(Math.max(params.timeout, 1000), 60_000) : undefined,
@@ -171,109 +329,237 @@ export default function (pi: ExtensionAPI) {
 				} satisfies FetchOptions);
 				const tags = [
 					`HTTP ${r.status}`,
-					r.source === "wayback" ? `Wayback snapshot ${r.waybackDate}` : null,
+					r.source === "wayback" ? `Wayback ${r.waybackDate}` : null,
 					r.fromCache ? "cached" : null,
-					r.truncated ? "truncated" : null,
 				].filter(Boolean).join(" · ");
 				return {
 					content: [{ type: "text", text: `[${r.finalUrl}]\n[${tags}]\n\n${r.text}` }],
-					details: { status: r.status, source: r.source, fromCache: r.fromCache },
+					details: {
+						status: r.status,
+						source: r.source,
+						fromCache: r.fromCache,
+						chars: r.text.length,
+						truncated: r.truncated,
+						host: u.host,
+						preview: r.text.slice(0, 300),
+						durationMs: Date.now() - started,
+					},
 				};
 			} catch (err: any) {
 				return {
 					content: [{ type: "text", text: `Fetch error: ${err?.message ?? err}` }],
-					details: {},
+					details: { error: err?.message ?? String(err), durationMs: Date.now() - started },
+					isError: true,
 				};
 			}
 		},
+		...makeRenderers(
+			"Fetch Page",
+			(args) => String(args.url ?? ""),
+			(d) => {
+				const bits = [`HTTP ${d.status ?? "?"}`, `${d.chars ?? 0} chars`];
+				if (d.source === "wayback") bits.push("via Wayback");
+				if (d.fromCache) bits.push("cached");
+				if (d.truncated) bits.push("truncated");
+				return { ok: !d.error, text: bits.join(" · ") };
+			},
+		),
 	});
 
 	// ------------------------------------------------------ specialized tools
-	const apiTool = (
-		name: string,
-		label: string,
-		description: string,
-		fn: (query: string, max: number, signal?: AbortSignal) => Promise<
-			Array<{ title: string; url: string; snippet?: string; meta?: string }>
-		>,
-	) =>
-		pi.registerTool({
-			name,
-			label,
-			description,
-			parameters: Type.Object({
-				query: Type.String({ description: "Search query" }),
-				max: Type.Optional(Type.Number({ description: "Max results (default 8)" })),
-				no_cache: Type.Optional(Type.Boolean({ description: "Skip the 10-minute cache" })),
-			}),
-			async execute(_id, params, signal) {
-				try {
-					const results = await fn(params.query, MAX(params.max), signal);
-					return { content: [{ type: "text", text: fmtResults(results) }], details: { count: results.length } };
-				} catch (err: any) {
-					return {
-						content: [{ type: "text", text: `${label} error: ${err?.message ?? err}` }],
-						details: {},
-					};
-				}
-			},
-		});
-
-	apiTool(
+	registerSearchTool(
+		pi,
 		"search_stackoverflow",
 		"Stack Overflow Search",
 		"Programming Q&A via the Stack Exchange API (free, no key). Use for error messages, " +
 			"code patterns, debugging. Paste the full error for best results. " +
 			"Shows score, answer count, accepted status and tags.",
+		"Search Stack Overflow for programming Q&A (errors, debugging)",
 		(q, m, s) => searchStackOverflow(q, m, s),
+		(d) => ({ ok: (d.count ?? 0) > 0, text: `${d.count ?? 0} questions` }),
 	);
 
-	apiTool(
+	registerSearchTool(
+		pi,
 		"search_wikipedia",
 		"Wikipedia Search",
 		"Encyclopedia search via the MediaWiki API (free, no key). Use for definitions, concepts, " +
 			"history, people, places. Use short topic names, not full questions.",
+		"Search Wikipedia for encyclopedic background",
 		(q, m, s) => searchWikipedia(q, m, s),
+		(d) => ({ ok: (d.count ?? 0) > 0, text: `${d.count ?? 0} articles` }),
 	);
 
-	apiTool(
+	registerSearchTool(
+		pi,
 		"search_npm",
 		"npm Search",
 		"Search the npm registry (free, no key) for JavaScript/TypeScript packages. " +
 			"Returns name, version, description, quality and popularity scores.",
+		"Search npm registry for JS/TS packages with quality scores",
 		(q, m, s) => searchNpm(q, m, s),
+		(d) => ({ ok: (d.count ?? 0) > 0, text: `${d.count ?? 0} packages` }),
 	);
 
+	registerSearchTool(
+		pi,
+		"search_hn",
+		"Hacker News Search",
+		"Search Hacker News via the Algolia API (free, no key). Use for tech community opinion, " +
+			"launches, discussions. Returns points, comment counts, dates. Great for 'what do devs think of X'.",
+		"Search Hacker News for community discussion and opinion",
+		(q, m, s) => searchHackerNews(q, m, s),
+		(d) => ({ ok: (d.count ?? 0) > 0, text: `${d.count ?? 0} stories` }),
+	);
+
+	// github (separate: honors GITHUB_TOKEN)
 	pi.registerTool({
 		name: "search_github",
 		label: "GitHub Search",
 		description:
 			"Search GitHub repositories via the API (free, no key; 10 req/min). Returns stars, " +
 			"language, last-updated. Honors GITHUB_TOKEN env var if set (higher rate limits).",
+		promptSnippet: "Search GitHub repositories (stars, language, activity)",
 		parameters: Type.Object({
 			query: Type.String({ description: "Repository search query, e.g. 'websocket library language:python'" }),
 			max: Type.Optional(Type.Number({ description: "Max results (default 8)" })),
 			no_cache: Type.Optional(Type.Boolean({ description: "Skip the 10-minute cache" })),
 		}),
-		async execute(_id, params, signal) {
+		async execute(_id, params, signal, onUpdate) {
+			const started = Date.now();
+			onUpdate?.({ content: [{ type: "text", text: "…" }], details: { status: "searching github…" } });
 			try {
 				const token = process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
 				const results = await searchGithubRepos(params.query, MAX(params.max), signal, token);
-				return { content: [{ type: "text", text: fmtResults(results) }], details: { count: results.length } };
+				return {
+					content: [{ type: "text", text: fmtResults(results) }],
+					details: { results, count: results.length, durationMs: Date.now() - started },
+				};
 			} catch (err: any) {
 				return {
 					content: [{ type: "text", text: `GitHub search error: ${err?.message ?? err}` }],
-					details: {},
+					details: { error: err?.message ?? String(err), durationMs: Date.now() - started },
+					isError: true,
 				};
 			}
 		},
+		...makeRenderers(
+			"GitHub Search",
+			(args) => String(args.query ?? ""),
+			(d) => ({ ok: (d.count ?? 0) > 0, text: `${d.count ?? 0} repos` }),
+		),
 	});
 
-	apiTool(
-		"search_hn",
-		"Hacker News Search",
-		"Search Hacker News via the Algolia API (free, no key). Use for tech community opinion, " +
-			"launches, discussions. Returns points, comment counts, dates. Great for 'what do devs think of X'.",
-		(q, m, s) => searchHackerNews(q, m, s),
-	);
+	// ------------------------------------------------------------ /research
+	pi.registerCommand("research", {
+		description: "Multi-source research: web + HN + GitHub + Wikipedia, fetches top pages, then synthesizes",
+		handler: async (args, ctx) => {
+			const topic = (args ?? "").trim();
+			if (!topic) {
+				ctx.ui.notify("Usage: /research <topic>", "warning");
+				return;
+			}
+			const setStatus = (s: string) => {
+				try {
+					ctx.ui.setStatus("research", s);
+				} catch {
+					/* non-tui */
+				}
+			};
+			const setWidget = (lines: string[]) => {
+				try {
+					ctx.ui.setWidget(
+						"research",
+						lines.map((l) => clip(l, 100)),
+					);
+				} catch {
+					/* non-tui */
+				}
+			};
+
+			setStatus("researching…");
+			setWidget([`① searching: "${topic}"`]);
+
+			const sources: Array<{ kind: string; rows: Row[] }> = [];
+			const steps: string[] = [];
+			const push = async (kind: string, fn: () => Promise<Row[]>) => {
+				try {
+					const rows = await fn();
+					if (rows.length > 0) {
+						sources.push({ kind, rows });
+						steps.push(`✓ ${kind}: ${rows.length} results`);
+					} else steps.push(`– ${kind}: 0 results`);
+				} catch (e: any) {
+					steps.push(`✗ ${kind}: ${clip(String(e?.message ?? e), 60)}`);
+				}
+				setWidget([`② gathering sources…`, ...steps]);
+			};
+
+			await push("web", () => multiSearch(topic, 6, undefined).then((r) => r.results));
+			await push("hn", () => searchHackerNews(topic, 4));
+			await push("github", () => searchGithubRepos(topic, 4));
+			await push("wikipedia", () => searchWikipedia(topic, 3));
+
+			// fetch top pages (diverse hosts, skip search-engines/aggregators)
+			setStatus("fetching top pages…");
+			setWidget([...steps, "③ fetching top pages…"]);
+			const seenHosts = new Set<string>();
+			const picked: Array<{ url: string; title: string }> = [];
+			for (const s of sources.filter((x) => x.kind === "web")) {
+				for (const r of s.rows) {
+					try {
+						const host = new URL(r.url).host;
+						if (seenHosts.has(host) || /duckduckgo|brave\.com|reddit\.com|medium\.com\/@/.test(host)) continue;
+						seenHosts.add(host);
+						picked.push({ url: r.url, title: r.title });
+						if (picked.length >= 3) break;
+					} catch {
+						/* skip */
+					}
+				}
+				if (picked.length >= 3) break;
+			}
+			const pages: Array<{ title: string; url: string; text: string }> = [];
+			for (const p of picked) {
+				try {
+					const r = await smartFetch(p.url, { maxChars: 4000, timeoutMs: 15_000 });
+					pages.push({ title: p.title, url: p.url, text: r.text });
+					steps.push(`✓ fetched: ${clip(new URL(p.url).host, 40)}`);
+				} catch (e: any) {
+					steps.push(`✗ fetch failed: ${clip(new URL(p.url).host, 30)} (${clip(String(e?.message ?? e), 40)})`);
+				}
+				setWidget([...steps]);
+			}
+
+			// hand everything to the model for synthesis
+			setStatus("synthesizing…");
+			let material = `# Research: ${topic}\n\n`;
+			for (const s of sources) {
+				material += `## ${s.kind} results\n${fmtResults(s.rows)}\n\n`;
+			}
+			if (pages.length > 0) {
+				material += `## Page contents\n`;
+				for (const p of pages) {
+					material += `### ${p.title}\n${p.url}\n\n${p.text}\n\n`;
+				}
+			}
+			material += `---\nSynthesize the above into a research briefing:
+- Group findings by sub-topic (like "three-way comparisons", "benchmarks", etc.)
+- For each group, list the documents worth reading: [source name](url) — one line on what it covers
+- End with "Recurring conclusions": 3-6 bullets of the consensus/tensions across sources
+- Cite only what appears above; if sources are thin, say so.`;
+
+			pi.sendUserMessage(material);
+			setWidget([...steps, "④ handed to model for synthesis"]);
+			setStatus(`done · ${steps.length} steps`);
+			setTimeout(() => {
+				try {
+					ctx.ui.setStatus("research", undefined as never);
+					ctx.ui.setWidget("research", []);
+				} catch {
+					/* cleanup best-effort */
+				}
+			}, 8000);
+		},
+	});
 }
