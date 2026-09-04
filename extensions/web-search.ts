@@ -64,13 +64,11 @@ interface Theme {
 
 
 /**
- * Claude Code-style renderers:
+ * Claude Code-style renderers (flat — no background box, no emoji):
  *   ⏺ Web Search("query")
  *     ⎿ Found 8 results in 4.1s
- *     ⎿ via ddg · cached        (only when noteworthy)
- *     ⎿ 1. Result title …       (expanded view)
- * Live ticking elapsed while running (pi's native bash-renderer pattern:
- * context.executionStarted + setInterval + context.invalidate).
+ *     ⎿ via ddg · (ctrl+o to expand)
+ * Green dot marks state, live ticking elapsed while running.
  */
 function makeRenderers(
 	toolName: string,
@@ -78,6 +76,8 @@ function makeRenderers(
 	resultSummary: (details: any) => { ok: boolean; line1: string; line2?: string; rows?: Row[]; preview?: string },
 ) {
 	return {
+		// self shell: no default Box bg — flat like Claude Code
+		renderShell: "self" as const,
 		renderCall(args: any, theme: any, context: any) {
 			const t = theme as Theme;
 			if (context.executionStarted && context.state.startedAt === undefined) {
@@ -85,7 +85,7 @@ function makeRenderers(
 			}
 			const text = (context.lastComponent as Text | undefined) ?? new Text("", 0, 0);
 			text.setText(
-				t.fg("accent", "⏺ ") +
+				t.fg("success", "⏺ ") +
 					t.fg("toolTitle", t.bold(toolName)) +
 					t.fg("dim", `(${JSON.stringify(clip(String(argDetail(args ?? {})), 70))})`),
 			);
@@ -113,19 +113,19 @@ function makeRenderers(
 			if (options.isPartial) {
 				const step = result?.details?.status ?? "Searching…";
 				const elapsed = state.startedAt !== undefined ? secs(Date.now() - state.startedAt) : "";
-				text.setText(t.fg("warning", `  ⎿ ⏳ ${step}${elapsed ? ` · ${elapsed}` : ""}`));
+				text.setText(t.fg("warning", `  ⎿ ${step}${elapsed ? ` · ${elapsed}` : ""}`));
 				return text;
 			}
 
 			const isError = result?.isError || result?.details?.error;
 			if (isError) {
 				const msg = result?.details?.error ?? result?.content?.[0]?.text ?? "failed";
-				text.setText(t.fg("error", `  ⎿ ✗ ${clip(String(msg), 160)}`));
+				text.setText(t.fg("error", `  ⎿ ${clip(String(msg), 160)}`));
 				return text;
 			}
 
 			const { ok, line1, line2, rows, preview } = resultSummary(result?.details ?? {});
-			let out = t.fg(ok ? "success" : "warning", "  ⎿ ") + t.fg("muted", line1);
+			let out = t.fg("success", "  ⎿ ") + t.fg("muted", line1);
 			if (line2) out += `\n  ⎿ ${t.fg("dim", line2)}`;
 			if (options.expanded) {
 				if (rows && rows.length > 0) {
@@ -143,7 +143,7 @@ function makeRenderers(
 					out += "\n" + t.fg("dim", clip(String(preview), 400));
 				}
 			} else {
-				out += t.fg("dim", `  ${keyHint("app.tools.expand", "to expand")}`);
+				out += t.fg("dim", `  (${keyHint("app.tools.expand", "to expand")})`);
 			}
 			text.setText(out);
 			return text;
