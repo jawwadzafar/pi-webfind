@@ -39,7 +39,20 @@ export interface FetchResult {
 	status: number;
 	finalUrl: string;
 	contentType: string;
-	source: "direct" | "wayback" | "jina" | "github-api" | "reddit-json" | "so-api" | "hn-api" | "arxiv-pdf" | "markdown";
+	source:
+		| "direct"
+		| "wayback"
+		| "jina"
+		| "github-api"
+		| "github-issue-api"
+		| "github-pr-api"
+		| "github-raw"
+		| "stackexchange-api"
+		| "hn-algolia"
+		| "reddit-json"
+		| "wikipedia-rest"
+		| "arxiv-pdf"
+		| "markdown";
 	waybackDate?: string;
 	truncated: boolean;
 	fromCache: boolean;
@@ -316,6 +329,25 @@ async function smartFetchRaw(url: string, opts: FetchOptions): Promise<FetchResu
 	const cacheKey = `f:${opts.raw ? "raw" : opts.maxChars}:${opts.query ?? ""}:${opts.headers ? JSON.stringify(opts.headers) : ""}:${safeUrl.href}`;
 	const cached = opts.noCache ? null : (FETCH_CACHE.get(cacheKey) as FetchResult | null);
 	if (cached) return { ...cached, fromCache: true };
+
+	// site adapters: known URL shapes route to their clean API (github/so/hn/reddit/wikipedia)
+	if (!opts.raw) {
+		const { trySiteAdapter } = await import("./adapters.ts");
+		const ad = await trySiteAdapter(safeUrl.href, opts.signal).catch(() => null);
+		if (ad) {
+			const out: FetchResult = {
+				text: ad.text.slice(0, opts.maxChars),
+				status: 200,
+				finalUrl: safeUrl.href,
+				contentType: "text/markdown",
+				source: ad.source as any,
+				truncated: ad.text.length > opts.maxChars,
+				fromCache: false,
+			};
+			FETCH_CACHE.set(cacheKey, out);
+			return out;
+		}
+	}
 
 	// retry with exponential backoff on transient failures
 	let lastErr: unknown;

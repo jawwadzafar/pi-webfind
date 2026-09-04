@@ -20,7 +20,7 @@ export interface ApiResult {
 	meta?: string;
 }
 
-async function getJson<T>(url: string, signal?: AbortSignal, headers?: Record<string, string>): Promise<T> {
+export async function getJson<T>(url: string, signal?: AbortSignal, headers?: Record<string, string>): Promise<T> {
 	const timeout = AbortSignal.timeout(TIMEOUT_MS);
 	const combined = signal ? AbortSignal.any([signal, timeout]) : timeout;
 	const res = await fetch(url, {
