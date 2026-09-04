@@ -26,8 +26,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
           registry-url: https://registry.npmjs.org
+      - name: npm >= 11.5.1 (required for OIDC trusted publishing)
+        run: npm install -g npm@latest
       - run: npm ci
       - name: Sanity — tarball must be clean
         run: |
