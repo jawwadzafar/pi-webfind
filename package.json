@@ -1,7 +1,7 @@
 {
   "name": "pi-webfind",
   "version": "0.5.0",
-  "description": "Claude Code-style web research for the pi coding agent \u2014 WebSearch, fetch (PDFs, Wayback, anti-block), Stack Overflow, GitHub, HN, Wikipedia, npm. Free, no API keys.",
+  "description": "Claude Code-style web research for the pi coding agent \u2014 WebSearch, query-aware fetch (PDFs, Wayback, site adapters, markdown extraction), Stack Overflow, GitHub, HN, Wikipedia, npm. 100% free, no API keys.",
   "type": "module",
   "keywords": [
     "pi-package",
@@ -12,7 +12,8 @@
     "free",
     "duckduckgo",
     "brave",
-    "fetch"
+    "fetch",
+    "webfind"
   ],
   "license": "MIT",
   "repository": {
@@ -22,7 +23,8 @@
   "pi": {
     "extensions": [
       "./extensions"
-    ]
+    ],
+    "image": "https://jawwadzafar.github.io/pi-webfind/screenshot.png"
   },
   "peerDependencies": {
     "@earendil-works/pi-coding-agent": "*",
@@ -36,5 +38,7 @@
   ],
   "engines": {
     "node": ">=20"
-  }
+  },
+  "author": "Jawwad Zafar <zafarjawwad@gmail.com>",
+  "homepage": "https://jawwadzafar.github.io/pi-webfind"
 }
