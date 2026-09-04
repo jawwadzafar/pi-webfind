@@ -266,7 +266,41 @@ export async function braveSearch(
 	return results.slice(0, maxResults);
 }
 
-/** Run several engines in parallel; merge, dedupe by URL, interleave for diversity. */
+function parseRssItems(xml: string, engine: string): SearchResult[] {
+	const out: SearchResult[] = [];
+	for (const m of xml.matchAll(/<item>([\s\S]*?)<\/item>/g)) {
+		const item = m[1];
+		const title = stripTags(item.match(/<title>([\s\S]*?)<\/title>/)?.[1] ?? "");
+		const url = (item.match(/<link>([\s\S]*?)<\/link>/)?.[1] ?? "").trim();
+		const snippet = stripTags(item.match(/<description>([\s\S]*?)<\/description>/)?.[1] ?? "");
+		if (!title || !/^https?:\/\//.test(url)) continue;
+		out.push({ title, url, snippet, engine });
+	}
+	return out;
+}
+
+/** Bing RSS — structured endpoint, real web index, no bot challenges. */
+export async function bingRssSearch(
+	query: string,
+	maxResults: number,
+	recency: Recency,
+	signal?: AbortSignal,
+): Promise<SearchResult[]> {
+	const params = new URLSearchParams({
+		q: query,
+		format: "rss",
+		count: String(Math.max(maxResults, 15)),
+		setmkt: "en-US",
+		setlang: "en",
+	});
+	if (recency) params.set("qdr", recency); // bing supports freshness via qdr on html; harmless on rss
+	const xml = await get(`https://www.bing.com/search?${params}`, signal);
+	const results = parseRssItems(xml, "bing");
+	if (results.length === 0) throw new Error("no results from bing rss");
+	return results.slice(0, maxResults);
+}
+
+/** Run several engines in parallel; RRF-fuse, dedupe by URL, consensus ranks first. */
 export async function multiSearch(
 	query: string,
 	maxResults: number,
@@ -276,38 +310,38 @@ export async function multiSearch(
 	const attempts: Array<{ name: string; fn: () => Promise<SearchResult[]> }> = [
 		{ name: "ddg", fn: () => ddgSearch(query, 15, recency, signal) },
 		{ name: "brave", fn: () => braveSearch(query, 15, recency, signal) },
+		{ name: "bing", fn: () => bingRssSearch(query, 15, recency, signal) },
 	];
 	const settled = await Promise.allSettled(attempts.map((a) => a.fn()));
-	const buckets: SearchResult[][] = [];
+	const namedBuckets: Array<{ name: string; rows: SearchResult[] }> = [];
 	const engines: string[] = [];
 	const errors: string[] = [];
 	settled.forEach((r, i) => {
 		if (r.status === "fulfilled" && r.value.length > 0) {
-			buckets.push(r.value);
+			namedBuckets.push({ name: attempts[i].name, rows: r.value });
 			engines.push(attempts[i].name);
 		} else if (r.status === "rejected") {
 			errors.push(`${attempts[i].name}: ${(r.reason as Error)?.message ?? r.reason}`);
 		}
 	});
-	// round-robin interleave for engine diversity, dedupe by normalized URL
-	const merged: SearchResult[] = [];
-	const seen = new Set<string>();
+	// reciprocal rank fusion (RRF, k=60) — consensus hits across engines rank higher, dedupe by normalized URL
+	const K = 60;
 	const norm = (u: string) => u.replace(/\/+$/, "").replace(/^https?:\/\/www\./, "http://");
-	for (let round = 0; ; round++) {
-		let added = false;
-		for (const bucket of buckets) {
-			const r = bucket[round];
-			if (!r) continue;
+	const scored = new Map<string, { r: SearchResult; s: number; engines: Set<string> }>();
+	for (const bucket of namedBuckets) {
+		bucket.rows.forEach((r, i) => {
 			const key = norm(r.url);
-			if (seen.has(key)) continue;
-			seen.add(key);
-			merged.push(r);
-			added = true;
-			if (merged.length >= maxResults) return { results: merged, engines, errors };
-		}
-		if (!added) break;
+			const e = scored.get(key) ?? { r, s: 0, engines: new Set<string>() };
+			e.s += 1 / (K + i + 1);
+			e.engines.add(bucket.name);
+			scored.set(key, e);
+		});
 	}
-	return { results: merged, engines, errors };
+	const merged = [...scored.values()]
+		.sort((a, b) => b.s - a.s)
+		.slice(0, maxResults)
+		.map((e) => ({ ...e.r, engines: [...e.engines] }) as SearchResult & { engines?: string[] });
+	if (merged.length > 0) return { results: merged, engines, errors };
 }
 
 // -------------------------------------------------------------------- cache

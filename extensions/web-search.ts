@@ -15,6 +15,7 @@ import { Text } from "@earendil-works/pi-tui";
 import { Type } from "typebox";
 import {
 	braveSearch,
+	bingRssSearch,
 	cacheGet,
 	cacheSet,
 	ddgSearch,
@@ -213,13 +214,13 @@ export default function (pi: ExtensionAPI) {
 			"engine='multi' merges both engines in parallel for best coverage.",
 		promptSnippet: "Free multi-engine web search (DDG + Brave) with recency filter",
 		promptGuidelines: [
-			"Use web_search for general research, then fetch_page on the most promising results to read them in full before answering.",
+			"Use web_search for general research, then fetch_page on the most promising results to read them in full before answering. When fetching long pages, pass query with what you're looking for — it returns the relevant passages instead of the page head.",
 		],
 		parameters: Type.Object({
 			query: Type.String({ description: "Search query" }),
 			max_results: Type.Optional(Type.Number({ description: "Max results, 1-20 (default 8)" })),
 			recency: Type.Optional(Type.String({ description: "d=day, w=week, m=month, y=year (optional)" })),
-			engine: Type.Optional(Type.String({ description: "ddg (default) | brave | multi (parallel merge)" })),
+			engine: Type.Optional(Type.String({ description: "ddg (default) | brave | bing | multi (parallel merge)" })),
 			refresh: Type.Optional(Type.Boolean({ description: "Skip the 10-minute cache" })),
 		}),
 		async execute(_id, params, signal, onUpdate) {
@@ -240,8 +241,18 @@ export default function (pi: ExtensionAPI) {
 					onUpdate?.({ content: [{ type: "text", text: "…" }], details: { status: "querying brave…" } });
 					return { results: (await braveSearch(params.query, maxResults, recency, signal)) as Row[], engines: ["brave"], errors: [] as string[] };
 				}
+				if (engine === "bing") {
+					onUpdate?.({ content: [{ type: "text", text: "…" }], details: { status: "querying bing rss…" } });
+					return { results: (await bingRssSearch(params.query, maxResults, recency, signal)) as Row[], engines: ["bing"], errors: [] as string[] };
+				}
 				onUpdate?.({ content: [{ type: "text", text: "…" }], details: { status: "querying duckduckgo…" } });
-				return { results: (await ddgSearch(params.query, maxResults, recency, signal)) as Row[], engines: ["ddg"], errors: [] as string[] };
+				try {
+					return { results: (await ddgSearch(params.query, maxResults, recency, signal)) as Row[], engines: ["ddg"], errors: [] as string[] };
+				} catch (err) {
+					// ddg fully failed — structured bing rss before giving up
+					onUpdate?.({ content: [{ type: "text", text: "…" }], details: { status: "ddg failed — trying bing rss…" } });
+					return { results: (await bingRssSearch(params.query, maxResults, recency, signal)) as Row[], engines: ["bing"], errors: [String((err as Error)?.message ?? err)] };
+				}
 			};
 			try {
 				if (!params.refresh) {
@@ -319,10 +330,17 @@ export default function (pi: ExtensionAPI) {
 		description:
 			"Fetch a URL and return readable content. Handles HTML (article extraction, nav/ads stripped), " +
 			"JSON (pretty-printed), plain text, and PDFs (text extraction). On 401/403/429/503 automatically " +
-			"retries via the Wayback Machine. SSRF-protected. Custom headers supported. Cached 1h.",
+			"retries via the Wayback Machine; thin/SPA pages re-rendered via a reader proxy. SSRF-protected. " +
+				"Pass query to get the most relevant passages of a long page instead of its head. Cached 1h.",
 		promptSnippet: "Fetch a URL → readable text; handles PDFs, JSON, bot-walls (Wayback fallback)",
 		parameters: Type.Object({
 			url: Type.String({ description: "URL to fetch (http/https only)" }),
+			query: Type.Optional(
+				Type.String({
+					description:
+						"What you're looking for on this page. Returns intro + most query-relevant passages instead of the page head. Recommended for long pages.",
+				}),
+			),
 			max_chars: Type.Optional(Type.Number({ description: "Max text chars (default 8000, max 50000)" })),
 			raw: Type.Optional(Type.Boolean({ description: "Return raw HTML instead of extracted text" })),
 			timeout: Type.Optional(Type.Number({ description: "Timeout ms (1000-60000, default 15000)" })),
@@ -346,6 +364,7 @@ export default function (pi: ExtensionAPI) {
 				const u = new URL(params.url);
 				onUpdate?.({ content: [{ type: "text", text: "…" }], details: { status: `fetching ${u.host}…` } });
 				const r = await smartFetch(params.url, {
+					query: (params.query as string | undefined)?.trim() || undefined,
 					maxChars: MAX(params.max_chars, 8000, 50_000),
 					raw: params.raw,
 					timeoutMs: params.timeout ? Math.min(Math.max(params.timeout, 1000), 60_000) : undefined,

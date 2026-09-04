@@ -4,6 +4,7 @@
  */
 import { createTtlCache } from "./cache.ts";
 import { htmlToText } from "./engine.ts";
+import { topPassages } from "./rank.ts";
 import { extractPdf, extractPdfViaPoppler } from "./pdf.ts";
 
 export const UA =
@@ -17,6 +18,8 @@ const MAX_BYTES = 3 * 1024 * 1024; // read at most 3MB
 const DEFAULT_TIMEOUT = 15_000;
 
 export interface FetchOptions {
+	/** Optional query — when set, return the intro + query-relevant passages instead of the page head. */
+	query?: string;
 	maxChars: number;
 	raw?: boolean;
 	timeoutMs?: number;
@@ -275,9 +278,30 @@ function extract(
 
 // ------------------------------------------------------------------- main
 
+/**
+ * Query-aware wrapper: fetches with a wide extraction window, then ranks
+ * passages against opts.query (lib/rank.ts) down to opts.maxChars. Applied
+ * AFTER all fallback paths so wayback/jina results benefit equally.
+ */
 export async function smartFetch(url: string, opts: FetchOptions): Promise<FetchResult> {
+	const wide = opts.query?.trim() && !opts.raw ? Math.max(opts.maxChars * 8, 40_000) : opts.maxChars;
+	const result = await smartFetchRaw(url, { ...opts, maxChars: wide });
+	if (!opts.query?.trim() || opts.raw) return result;
+	const { picked, total } = topPassages(result.text, opts.query, opts.maxChars, 600);
+	if (picked.length === 0) {
+		return { ...result, text: result.text.slice(0, opts.maxChars), truncated: result.text.length > opts.maxChars };
+	}
+	const parts = picked.map((p) => (p.heading ? `## ${p.heading}\n${p.text}` : p.text));
+	const footer = `\n\n[${picked.length} of ${total} passages shown — most relevant to the query. Omit query for the page head.]`;
+	let body = parts.join("\n\n");
+	const truncated = body.length + footer.length > opts.maxChars;
+	if (truncated) body = body.slice(0, Math.max(opts.maxChars - footer.length, 0));
+	return { ...result, text: body + footer, truncated };
+}
+
+async function smartFetchRaw(url: string, opts: FetchOptions): Promise<FetchResult> {
 	const safeUrl = assertSafeUrl(url);
-	const cacheKey = `f:${opts.raw ? "raw" : opts.maxChars}:${opts.headers ? JSON.stringify(opts.headers) : ""}:${safeUrl.href}`;
+	const cacheKey = `f:${opts.raw ? "raw" : opts.maxChars}:${opts.query ?? ""}:${opts.headers ? JSON.stringify(opts.headers) : ""}:${safeUrl.href}`;
 	const cached = opts.noCache ? null : (FETCH_CACHE.get(cacheKey) as FetchResult | null);
 	if (cached) return { ...cached, fromCache: true };
 
