@@ -51,4 +51,5 @@ jobs:
             --repo "$GITHUB_REPOSITORY" \
             --title "pi-webfind ${TAG}" \
             --generate-notes \
-            "$TARBALL#npm install: pi-webfind-${TAG#v}.tgz"
+            "$TARBALL" \
+          || gh release upload "$TAG" "$TARBALL" --clobber
