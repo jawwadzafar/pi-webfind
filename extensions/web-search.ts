@@ -217,13 +217,12 @@ export default function (pi: ExtensionAPI) {
 		description:
 			"General web search — free, no API key (DuckDuckGo + Brave). Returns titles, URLs, snippets. " +
 			"Use for news, articles, broad topics. Use fetch_page to read a result in full. " +
-			"engine='multi' merges both engines in parallel for best coverage.",
+			"engine='multi' merges both engines in parallel for best coverage. " +
+			"For research questions, run 2-3 queries with varied phrasings (add a year, quote the exact error, add 'docs' or 'github'); " +
+			"set deep:true when you need facts rather than links; prefer recent results for fast-moving topics and cite the date you relied on.",
 		promptSnippet: "Free multi-engine web search (DDG + Brave) with recency filter",
 		promptGuidelines: [
-			"For anything factual or current, search before answering. Run 2-3 searches with different phrasings (add a year, quote the exact error, add 'docs' or 'github') — one query is rarely enough.",
-			"Set deep:true on web_search when you need facts rather than links; use fetch_page with query when you need one page in depth. Cite URLs inline.",
-			"Read at least two independent sources before stating a conclusion. Prefer primary sources (official docs, repos, papers) over aggregators, and say when sources disagree or are thin.",
-			"Results include dates when available — prefer recent ones for fast-moving topics and mention which date you relied on.",
+			"Use web tools when the question depends on current or external information the user hasn't provided; don't search for stable knowledge you already know.",
 		],
 		parameters: Type.Object({
 			query: Type.String({ description: "Search query" }),
