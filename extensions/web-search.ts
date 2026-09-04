@@ -62,65 +62,85 @@ interface Theme {
 	dim(text: string): string;
 }
 
-/** Header line like Claude Code's `⏺ Web Search("query")` */
-function toolHeader(theme: Theme, tool: string, detail: string): string {
-	return theme.fg("toolTitle", theme.bold(tool)) + theme.fg("dim", `(${JSON.stringify(clip(detail, 70))})`);
-}
 
-/** Compact one-line success summary + keyHint to expand */
-function statusLine(
-	theme: Theme,
-	ok: boolean,
-	summary: string,
-	durationMs?: number,
-	expanded = true,
-): string {
-	let line = ok ? theme.fg("success", "✓ ") : theme.fg("error", "✗ ");
-	line += theme.fg("muted", summary);
-	if (durationMs !== undefined) line += theme.fg("dim", ` · ${secs(durationMs)}`);
-	if (!expanded) line += theme.fg("dim", `  ${keyHint("app.tools.expand", "to expand")}`);
-	return line;
-}
-
-function makeRenderers(toolName: string, argDetail: (args: any) => string, resultSummary: (details: any) => { ok: boolean; text: string }) {
+/**
+ * Claude Code-style renderers:
+ *   ⏺ Web Search("query")
+ *     ⎿ Found 8 results in 4.1s
+ *     ⎿ via ddg · cached        (only when noteworthy)
+ *     ⎿ 1. Result title …       (expanded view)
+ * Live ticking elapsed while running (pi's native bash-renderer pattern:
+ * context.executionStarted + setInterval + context.invalidate).
+ */
+function makeRenderers(
+	toolName: string,
+	argDetail: (args: any) => string,
+	resultSummary: (details: any) => { ok: boolean; line1: string; line2?: string; rows?: Row[]; preview?: string },
+) {
 	return {
 		renderCall(args: any, theme: any, context: any) {
 			const t = theme as Theme;
+			if (context.executionStarted && context.state.startedAt === undefined) {
+				context.state.startedAt = Date.now();
+			}
 			const text = (context.lastComponent as Text | undefined) ?? new Text("", 0, 0);
-			text.setText(toolHeader(t, toolName, argDetail(args ?? {})));
+			text.setText(
+				t.fg("accent", "⏺ ") +
+					t.fg("toolTitle", t.bold(toolName)) +
+					t.fg("dim", `(${JSON.stringify(clip(String(argDetail(args ?? {})), 70))})`),
+			);
 			return text;
 		},
-		renderResult(result: any, options: { expanded?: boolean; isPartial?: boolean }, theme: any, context: any) {
+		renderResult(
+			result: any,
+			options: { expanded?: boolean; isPartial?: boolean },
+			theme: any,
+			context: any,
+		) {
 			const t = theme as Theme;
 			const text = (context.lastComponent as Text | undefined) ?? new Text("", 0, 0);
+			const state = context.state ?? {};
+
+			// live elapsed ticking while partial (1s interval, like pi's bash renderer)
+			if (state.startedAt !== undefined && options.isPartial && !state.interval) {
+				state.interval = setInterval(() => context.invalidate?.(), 1000);
+			}
+			if (!options.isPartial && state.interval) {
+				clearInterval(state.interval);
+				state.interval = undefined;
+			}
+
 			if (options.isPartial) {
-				const step = result?.details?.status ?? "working…";
-				text.setText(theme.fg("warning", `⏳ ${step}`));
+				const step = result?.details?.status ?? "Searching…";
+				const elapsed = state.startedAt !== undefined ? secs(Date.now() - state.startedAt) : "";
+				text.setText(t.fg("warning", `  ⎿ ⏳ ${step}${elapsed ? ` · ${elapsed}` : ""}`));
 				return text;
 			}
+
 			const isError = result?.isError || result?.details?.error;
 			if (isError) {
 				const msg = result?.details?.error ?? result?.content?.[0]?.text ?? "failed";
-				text.setText(theme.fg("error", `✗ ${clip(String(msg), 160)}`));
+				text.setText(t.fg("error", `  ⎿ ✗ ${clip(String(msg), 160)}`));
 				return text;
 			}
-			const { ok, text: summary } = resultSummary(result?.details ?? {});
-			let out = (ok ? t.fg("success", "✓ ") : t.fg("warning", "! ")) + t.fg("muted", summary);
-			const d = result?.details ?? {};
-			if (d.durationMs !== undefined) out += t.fg("dim", ` · ${secs(d.durationMs)}`);
+
+			const { ok, line1, line2, rows, preview } = resultSummary(result?.details ?? {});
+			let out = t.fg(ok ? "success" : "warning", "  ⎿ ") + t.fg("muted", line1);
+			if (line2) out += `\n  ⎿ ${t.fg("dim", line2)}`;
 			if (options.expanded) {
-				const rows: Row[] = d.results ?? [];
-				if (rows.length > 0) {
-					out += "\n" + rows
-						.map((r, i) => {
-							let line = `  ${t.fg("accent", `${i + 1}. ${clip(r.title, 90)}`)}`;
-							line += `\n    ${t.fg("dim", clip(r.url, 110))}`;
-							if (r.meta) line += `  ${t.fg("muted", clip(r.meta, 80))}`;
-							return line;
-						})
-						.join("\n");
-				} else if (d.preview) {
-					out += "\n" + t.fg("dim", clip(String(d.preview), 400));
+				if (rows && rows.length > 0) {
+					out +=
+						"\n" +
+						rows
+							.map((r, i) => {
+								let line = `    ${t.fg("accent", `${i + 1}. ${clip(r.title, 90)}`)}`;
+								line += `\n       ${t.fg("dim", clip(r.url, 110))}`;
+								if (r.meta) line += `  ${t.fg("muted", clip(r.meta, 80))}`;
+								return line;
+							})
+							.join("\n");
+				} else if (preview) {
+					out += "\n" + t.fg("dim", clip(String(preview), 400));
 				}
 			} else {
 				out += t.fg("dim", `  ${keyHint("app.tools.expand", "to expand")}`);
@@ -140,9 +160,10 @@ function registerSearchTool(
 	description: string,
 	promptSnippet: string,
 	run: (query: string, max: number, signal?: AbortSignal) => Promise<Row[]>,
-	summary: (details: any) => { ok: boolean; text: string } = (d) => ({
+	summary: (details: any) => { ok: boolean; line1: string; line2?: string; rows?: Row[]; preview?: string } = (d) => ({
 		ok: true,
-		text: `${d.count ?? 0} results`,
+		line1: `Found ${d.count ?? 0} results in ${secs(d.durationMs ?? 0)}`,
+		rows: d.results,
 	}),
 ) {
 	pi.registerTool({
@@ -159,7 +180,7 @@ function registerSearchTool(
 			const started = Date.now();
 			onUpdate?.({
 				content: [{ type: "text", text: `${label}…` }],
-				details: { status: `searching ${JSON.stringify(clip(params.query, 50))}…` },
+				details: { status: `Searching ${JSON.stringify(clip(params.query, 50))}…` },
 			});
 			try {
 				const results = await run(params.query, MAX(params.max), signal);
@@ -279,8 +300,14 @@ export default function (pi: ExtensionAPI) {
 			"Web Search",
 			(args) => String(args.query ?? ""),
 			(d) => {
-				const eng = (d.engines ?? []).join("+") || (d.cached ? "cache" : "ddg");
-				return { ok: (d.count ?? 0) > 0, text: `${d.count ?? 0} results · ${eng}${d.cached ? " · cached" : ""}` };
+				const eng = (d.engines ?? []).join(" + ") || (d.cached ? "cache" : "ddg");
+				const line1 = `Found ${d.count ?? 0} results in ${secs(d.durationMs ?? 0)}`;
+				const line2 = d.cached
+					? `via cache · ${eng}`
+					: (d.errors ?? []).length > 0
+						? `via ${eng} · failed: ${(d.errors ?? []).join("; ")}`
+						: `via ${eng}`;
+				return { ok: (d.count ?? 0) > 0, line1, line2, rows: d.results, preview: undefined };
 			},
 		),
 	});
@@ -357,11 +384,13 @@ export default function (pi: ExtensionAPI) {
 			"Fetch Page",
 			(args) => String(args.url ?? ""),
 			(d) => {
-				const bits = [`HTTP ${d.status ?? "?"}`, `${d.chars ?? 0} chars`];
+				const line1 = `Read ${d.chars ?? 0} chars in ${secs(d.durationMs ?? 0)}`;
+				const bits = [`HTTP ${d.status ?? "?"}`];
 				if (d.source === "wayback") bits.push("via Wayback");
+				if (d.source === "jina") bits.push("via r.jina.ai");
 				if (d.fromCache) bits.push("cached");
 				if (d.truncated) bits.push("truncated");
-				return { ok: !d.error, text: bits.join(" · ") };
+				return { ok: !d.error, line1, line2: bits.join(" · "), rows: undefined, preview: d.preview };
 			},
 		),
 	});
@@ -376,7 +405,7 @@ export default function (pi: ExtensionAPI) {
 			"Shows score, answer count, accepted status and tags.",
 		"Search Stack Overflow for programming Q&A (errors, debugging)",
 		(q, m, s) => searchStackOverflow(q, m, s),
-		(d) => ({ ok: (d.count ?? 0) > 0, text: `${d.count ?? 0} questions` }),
+		(d) => ({ ok: (d.count ?? 0) > 0, line1: `Found ${d.count ?? 0} questions in ${secs(d.durationMs ?? 0)}` }),
 	);
 
 	registerSearchTool(
@@ -387,7 +416,7 @@ export default function (pi: ExtensionAPI) {
 			"history, people, places. Use short topic names, not full questions.",
 		"Search Wikipedia for encyclopedic background",
 		(q, m, s) => searchWikipedia(q, m, s),
-		(d) => ({ ok: (d.count ?? 0) > 0, text: `${d.count ?? 0} articles` }),
+		(d) => ({ ok: (d.count ?? 0) > 0, line1: `Found ${d.count ?? 0} articles in ${secs(d.durationMs ?? 0)}` }),
 	);
 
 	registerSearchTool(
@@ -398,7 +427,7 @@ export default function (pi: ExtensionAPI) {
 			"Returns name, version, description, quality and popularity scores.",
 		"Search npm registry for JS/TS packages with quality scores",
 		(q, m, s) => searchNpm(q, m, s),
-		(d) => ({ ok: (d.count ?? 0) > 0, text: `${d.count ?? 0} packages` }),
+		(d) => ({ ok: (d.count ?? 0) > 0, line1: `Found ${d.count ?? 0} packages in ${secs(d.durationMs ?? 0)}` }),
 	);
 
 	registerSearchTool(
@@ -409,7 +438,7 @@ export default function (pi: ExtensionAPI) {
 			"launches, discussions. Returns points, comment counts, dates. Great for 'what do devs think of X'.",
 		"Search Hacker News for community discussion and opinion",
 		(q, m, s) => searchHackerNews(q, m, s),
-		(d) => ({ ok: (d.count ?? 0) > 0, text: `${d.count ?? 0} stories` }),
+		(d) => ({ ok: (d.count ?? 0) > 0, line1: `Found ${d.count ?? 0} stories in ${secs(d.durationMs ?? 0)}` }),
 	);
 
 	// github (separate: honors GITHUB_TOKEN)
@@ -446,7 +475,7 @@ export default function (pi: ExtensionAPI) {
 		...makeRenderers(
 			"GitHub Search",
 			(args) => String(args.query ?? ""),
-			(d) => ({ ok: (d.count ?? 0) > 0, text: `${d.count ?? 0} repos` }),
+			(d) => ({ ok: (d.count ?? 0) > 0, line1: `Found ${d.count ?? 0} repos in ${secs(d.durationMs ?? 0)}`, rows: d.results }),
 		),
 	});
 
