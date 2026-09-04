@@ -4,7 +4,7 @@ layout: home
 hero:
   name: pi-webfind
   "image": {
-    "src": "/pi-webfind/logo.png",
+    "src": "/logo.png",
     "alt": "pi-webfind"
   }
   text: Web research for the pi coding agent
