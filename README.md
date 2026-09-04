@@ -1,73 +1,74 @@
 # pi-web-search-free
 
-**Free multi-engine web search + page fetching for the [pi coding agent](https://github.com/earendil-works/pi).**
+**The complete free web toolkit for the [pi coding agent](https://github.com/earendil-works/pi).**
 
-No API keys. No signups. No paid tiers. No rate-limit tokens to buy. Just scraping of
-search engines that tolerate it, with fallbacks and merging built in.
+No API keys. No signups. No paid tiers. Zero runtime dependencies.
 
 ```bash
-pi install /path/to/pi-web-search-free     # local
-pi install git:github.com/jawwadzafar/pi-web-search-free   # once pushed
+pi install /path/to/pi-web-search-free                      # local
+pi install git:github.com/jawwadzafar/pi-web-search-free    # once pushed
 ```
 
-## Tools
+## Tools (7)
 
-### `web_search`
-
-| Param | Default | Description |
+| Tool | Source | Best for |
 |---|---|---|
-| `query` | — | Search query |
-| `max_results` | 8 | 1–20 |
-| `recency` | — | `d`=day, `w`=week, `m`=month, `y`=year |
-| `engine` | `ddg` | `ddg` \| `brave` \| `multi` |
-| `refresh` | false | Skip the 10-min cache |
+| `web_search` | DuckDuckGo (×3 endpoints) + Brave | news, articles, broad queries |
+| `fetch_page` | any URL | readable extraction, JSON, binaries, blocked pages |
+| `search_stackoverflow` | Stack Exchange API | error messages, debugging |
+| `search_wikipedia` | MediaWiki API | definitions, concepts, history |
+| `search_npm` | npm registry API | JS/TS packages + quality scores |
+| `search_github` | GitHub API | repos, stars, languages |
+| `search_hn` | HN Algolia API | tech community opinion, launches |
 
-**Engine chain** (each falls through to the next on failure):
+All search tools share a 10-minute LRU cache and accept `max` / `no_cache`.
 
-1. DuckDuckGo html endpoint (GET)
-2. DuckDuckGo lite endpoint
-3. DuckDuckGo html endpoint (POST — bypasses many GET challenges)
-4. Brave Search HTML (independent index — real redundancy, not another DDG mirror)
-
-`engine: "multi"` fires DDG + Brave **in parallel**, then merges results
-round-robin (engine diversity) and dedupes by normalized URL. If the primary
-engine throws, the tool automatically retries with multi before giving up.
-
-### `fetch_page`
-
-Fetches a URL and returns readable text: `<script>/<style>/<nav>/<footer>/…`
-stripped, `<article>`/`<main>` content preferred, entities decoded, lists
-rendered as bullets. `{ url, max_chars (default 8000, max 50k), raw? }`.
-
-## The research loop (Claude-style, $0)
+### web_search
 
 ```
-web_search(query)  →  fetch_page(top 1-3 urls)  →  synthesize
+{ query, max_results?, recency? (d|w|m|y), engine? (ddg|brave|multi), refresh? }
 ```
 
-## Design notes
+**Engine chain** (falls through on any failure):
 
-- **Zero runtime dependencies** — Node ≥20 built-in `fetch`, `AbortSignal.any/timeout`
-- **Politeness**: global per-host throttle (1.2s), browser-like UA, sane timeouts
-- **Cache**: in-memory LRU (128 entries, 10 min TTL) so repeat questions cost nothing
-- **Peer deps only**: `@earendil-works/pi-coding-agent` + `typebox` (provided by pi itself)
+1. DDG html (GET) → 2. DDG lite → 3. DDG html (POST, bypasses GET challenges) → 4. Brave HTML (independent index)
 
-## Comparison with alternatives
+`engine: "multi"` runs DDG + Brave in parallel and merges round-robin with
+URL dedupe. If the primary engine throws, the tool retries with `multi`
+automatically before erroring.
 
-| Package | Needs API key? | Engines | Notes |
-|---|---|---|---|
-| **pi-web-search-free** | **No** | DDG ×3 + Brave, merged | zero deps |
-| henyo-pi-web | No | DDG (html→lite) | + SO/Wikipedia tools |
-| @everyx/pi-web-tools | Partial | multi + Exa fallback | Exa needs key |
-| pi-web-access | **Yes** | Brave/Tavily/Serper/… | most features, keys required |
+### fetch_page
+
+```
+{ url, max_chars? (default 8000, max 50k), raw?, timeout?, headers?, no_cache?, no_wayback? }
+```
+
+- Content-type aware: HTML → readable text (article-aware, nav/ads stripped),
+  JSON → pretty-printed, plain text passed through, binaries detected (metadata only)
+- **Wayback Machine fallback**: on 401/403/429/503 automatically retries via
+  archive.org snapshot (tagged in output with snapshot date)
+- **SSRF protection**: localhost/private-range/link-local hosts and non-http protocols blocked
+- Retry with exponential backoff; SPA detection (React/Next/shreddit/…)
+- Custom headers (e.g. `Authorization`) honored; 1h cache; 3MB response cap
+
+## Comparison
+
+| | **pi-web-search-free** | henyo-pi-web | @everyx/pi-web-tools | pi-web-access |
+|---|---|---|---|---|
+| API keys | **none** | none | some | required |
+| Runtime deps | **0** | jsdom+defuddle+unpdf | several | several |
+| Engines | DDG×3 + Brave, merged | DDG | multi+Exa | many (keyed) |
+| Verticals | SO, Wikipedia, npm, GitHub, HN | SO, Wikipedia, npm, GitHub | — | — |
+| Wayback fallback | ✅ | ✅ | — | — |
+| Recency filter | ✅ | — | — | ✅ |
+| SSRF guard | ✅ | ✅ | — | — |
 
 ## Limits (be honest about free)
 
-- Scraping is best-effort: engines can tighten bot defenses anytime; the
+- Scraping is best-effort; engines can tighten bot defenses anytime — the
   fallback chain + multi-engine merge is the mitigation
-- Don't hammer it: the built-in throttle is there for a reason
-- Behind aggressive VPNs/proxies you'll see more 403/429s — retry with `refresh: false`
-  after a minute
+- Built-in politeness throttle (per-host); don't bypass it
+- Unauthenticated GitHub search: 10 req/min (set `GITHUB_TOKEN` for more — optional)
 
 ## License
 

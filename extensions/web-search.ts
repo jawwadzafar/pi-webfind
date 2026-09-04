@@ -1,6 +1,15 @@
 /**
- * pi-web-search-free — free multi-engine web search + page fetch for pi.
- * No API keys, no paid services. DDG + Brave, merged and deduped.
+ * pi-web-search-free — the complete free web toolkit for pi.
+ * No API keys, no paid services, zero runtime dependencies.
+ *
+ * Tools:
+ *   web_search          multi-engine search (DDG ×3 + Brave, merged)
+ *   fetch_page          smart page fetch (extraction, wayback fallback, SSRF guard)
+ *   search_stackoverflow  programming Q&A (Stack Exchange API)
+ *   search_wikipedia      encyclopedia (MediaWiki API)
+ *   search_npm            JS package registry
+ *   search_github         repos via GitHub API
+ *   search_hn             Hacker News (Algolia API)
  */
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
@@ -9,30 +18,31 @@ import {
 	cacheGet,
 	cacheSet,
 	ddgSearch,
-	htmlToText,
 	multiSearch,
 	type Recency,
 	type SearchResult,
 } from "../lib/engine.ts";
+import {
+	searchGithubRepos,
+	searchHackerNews,
+	searchNpm,
+	searchStackOverflow,
+	searchWikipedia,
+} from "../lib/apis.ts";
+import { smartFetch, type FetchOptions } from "../lib/fetcher.ts";
 
-const UA =
-	"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
-const FETCH_TIMEOUT_MS = 20_000;
+const MAX = (n?: number, dflt = 8, cap = 20) => Math.min(Math.max(n ?? dflt, 1), cap);
 
-function formatResults(results: SearchResult[], engines: string[], errors: string[]): string {
-	if (results.length === 0) {
-		return (
-			`No results found.${errors.length ? `\nEngine errors: ${errors.join("; ")}` : ""}`
-		);
-	}
-	const header = `[via ${engines.join(" + ")}]${errors.length ? ` (failed: ${errors.join("; ")})` : ""}`;
-	const body = results
-		.map(
-			(r, i) =>
-				`${i + 1}. ${r.title}\n   ${r.url}${r.snippet ? `\n   ${r.snippet}` : ""}${r.engine ? `  [${r.engine}]` : ""}`,
-		)
+function fmtResults(results: Array<{ title: string; url: string; snippet?: string; meta?: string }>): string {
+	if (results.length === 0) return "No results found.";
+	return results
+		.map((r, i) => {
+			const lines = [`${i + 1}. ${r.title}`, `   ${r.url}`];
+			if (r.meta) lines.push(`   ${r.meta}`);
+			if (r.snippet) lines.push(`   ${r.snippet.slice(0, 250)}`);
+			return lines.join("\n");
+		})
 		.join("\n\n");
-	return `${header}\n\n${body}`;
 }
 
 export default function (pi: ExtensionAPI) {
@@ -41,69 +51,54 @@ export default function (pi: ExtensionAPI) {
 		name: "web_search",
 		label: "Web Search",
 		description:
-			"Search the web for free (DuckDuckGo + Brave, no API key). Returns titles, URLs, snippets. " +
-			"Use fetch_page afterwards to read a result in full. Use engine='multi' for better coverage " +
-			"on hard queries (merges both engines).",
+			"General web search — free, no API key (DuckDuckGo + Brave). Returns titles, URLs, snippets. " +
+			"Use for news, articles, broad topics. Use fetch_page to read a result in full. " +
+			"engine='multi' merges both engines in parallel for best coverage.",
 		parameters: Type.Object({
 			query: Type.String({ description: "Search query" }),
-			max_results: Type.Optional(
-				Type.Number({ description: "Max results, 1-20 (default 8)" }),
-			),
+			max_results: Type.Optional(Type.Number({ description: "Max results, 1-20 (default 8)" })),
 			recency: Type.Optional(
-				Type.String({
-					description: "Restrict to recent results: d=day, w=week, m=month, y=year",
-				}),
+				Type.String({ description: "d=day, w=week, m=month, y=year (optional)" }),
 			),
 			engine: Type.Optional(
-				Type.String({
-					description: "ddg (default, fast) | brave | multi (parallel DDG+Brave, merged)",
-				}),
+				Type.String({ description: "ddg (default) | brave | multi (parallel merge)" }),
 			),
-			refresh: Type.Optional(
-				Type.Boolean({ description: "Skip the 10-minute result cache" }),
-			),
+			refresh: Type.Optional(Type.Boolean({ description: "Skip the 10-minute cache" })),
 		}),
-		async execute(_toolCallId, params, signal) {
-			const maxResults = Math.min(Math.max(params.max_results ?? 8, 1), 20);
+		async execute(_id, params, signal) {
+			const maxResults = MAX(params.max_results);
 			const recency = (["d", "w", "m", "y"] as const).includes(params.recency as any)
 				? (params.recency as Recency)
 				: undefined;
 			const engine = params.engine ?? "ddg";
 			const cacheKey = `s:${engine}:${recency ?? ""}:${maxResults}:${params.query}`;
+			const run = async () => {
+				if (engine === "multi") {
+					const r = await multiSearch(params.query, maxResults, recency, signal);
+					return { results: r.results, engines: r.engines, errors: r.errors };
+				}
+				if (engine === "brave") {
+					return { results: await braveSearch(params.query, maxResults, recency, signal), engines: ["brave"], errors: [] as string[] };
+				}
+				return { results: await ddgSearch(params.query, maxResults, recency, signal), engines: ["ddg"], errors: [] as string[] };
+			};
 			try {
 				if (!params.refresh) {
 					const hit = cacheGet(cacheKey);
-					if (hit) {
+					if (hit)
 						return {
-							content: [{ type: "text", text: `[cached] ${formatResults(hit, ["cache"], [])}` }],
+							content: [{ type: "text", text: `[cached]\n${fmtResults(hit)}` }],
 							details: { cached: true, results: hit },
 						};
-					}
 				}
-				let results: SearchResult[];
-				let engines: string[] = [];
-				let errors: string[] = [];
-				if (engine === "multi") {
-					const r = await multiSearch(params.query, maxResults, recency, signal);
-					results = r.results;
-					engines = r.engines;
-					errors = r.errors;
-				} else if (engine === "brave") {
-					results = await braveSearch(params.query, maxResults, recency, signal);
-					engines = ["brave"];
-				} else {
-					results = await ddgSearch(params.query, maxResults, recency, signal);
-					engines = ["ddg"];
-				}
+				const { results, engines, errors } = await run();
 				if (results.length > 0) cacheSet(cacheKey, results);
+				const header = `[via ${engines.join(" + ")}]${errors.length ? ` (failed: ${errors.join("; ")})` : ""}`;
 				return {
-					content: [
-						{ type: "text", text: formatResults(results, engines, errors) },
-					],
+					content: [{ type: "text", text: `${header}\n\n${fmtResults(results)}` }],
 					details: { engines, errors, results },
 				};
 			} catch (err: any) {
-				// Last-ditch: try multi before giving up
 				if (engine !== "multi") {
 					try {
 						const r = await multiSearch(params.query, maxResults, recency, signal);
@@ -113,21 +108,21 @@ export default function (pi: ExtensionAPI) {
 								content: [
 									{
 										type: "text",
-										text: `${formatResults(r.results, r.engines, r.errors)}\n\n[primary engine failed: ${err?.message ?? err}]`,
+										text: `${fmtResults(r.results)}\n\n[primary engine '${engine}' failed: ${err?.message ?? err}]`,
 									},
 								],
 								details: { engines: r.engines, results: r.results },
 							};
 						}
 					} catch {
-						/* fall through to error */
+						/* fall through */
 					}
 				}
 				return {
 					content: [
 						{
 							type: "text",
-							text: `Search error: ${err?.message ?? err}. All engines may be rate-limited — wait a minute and retry, or try engine='multi'.`,
+							text: `Search error: ${err?.message ?? err}. Engines may be rate-limited — wait a minute or retry with engine='multi', refresh=true.`,
 						},
 					],
 					details: {},
@@ -141,40 +136,41 @@ export default function (pi: ExtensionAPI) {
 		name: "fetch_page",
 		label: "Fetch Page",
 		description:
-			"Fetch a web page and return its readable text (HTML stripped, nav/ads removed, " +
-			"article content preferred). Use after web_search to read results in full.",
+			"Fetch a URL and return readable content. Handles HTML (article extraction, nav/ads stripped), " +
+			"JSON (pretty-printed), plain text; detects binaries. On 401/403/429/503 automatically retries " +
+			"via the Wayback Machine. SSRF-protected. Custom headers supported. Cached 1h.",
 		parameters: Type.Object({
-			url: Type.String({ description: "URL to fetch (http/https)" }),
-			max_chars: Type.Optional(
-				Type.Number({ description: "Max characters of text to return (default 8000)" }),
+			url: Type.String({ description: "URL to fetch (http/https only)" }),
+			max_chars: Type.Optional(Type.Number({ description: "Max text chars (default 8000, max 50000)" })),
+			raw: Type.Optional(Type.Boolean({ description: "Return raw HTML instead of extracted text" })),
+			timeout: Type.Optional(Type.Number({ description: "Timeout ms (1000-60000, default 15000)" })),
+			headers: Type.Optional(
+				Type.Record(Type.String(), Type.String(), {
+					description: "Custom headers, e.g. {\"Authorization\": \"Bearer ...\"}",
+				}),
 			),
-			raw: Type.Optional(
-				Type.Boolean({ description: "Return raw HTML instead of extracted text" }),
-			),
+			no_cache: Type.Optional(Type.Boolean({ description: "Skip the 1-hour cache" })),
+			no_wayback: Type.Optional(Type.Boolean({ description: "Disable Wayback Machine fallback" })),
 		}),
-		async execute(_toolCallId, params, signal) {
-			const maxChars = Math.min(Math.max(params.max_chars ?? 8000, 200), 50_000);
+		async execute(_id, params, signal) {
 			try {
-				const url = new URL(params.url);
-				if (!/^https?:$/.test(url.protocol)) throw new Error("Only http/https URLs are supported");
-				const timeout = AbortSignal.timeout(FETCH_TIMEOUT_MS);
-				const combined = signal ? AbortSignal.any([signal, timeout]) : timeout;
-				const res = await fetch(url, {
-					headers: { "User-Agent": UA, Accept: "text/html,application/xhtml+xml" },
-					signal: combined,
-					redirect: "follow",
-				});
-				const html = await res.text();
-				if (!res.ok) throw new Error(`HTTP ${res.status}`);
-				const { text, truncated } = params.raw
-					? { text: html, truncated: html.length > maxChars }
-					: htmlToText(html, maxChars);
-				const note = truncated
-					? `\n\n[truncated — raise max_chars (up to 50000) if you need more]`
-					: "";
+		const r = await smartFetch(params.url, {
+					maxChars: MAX(params.max_chars, 8000, 50_000),
+					raw: params.raw,
+					timeoutMs: params.timeout ? Math.min(Math.max(params.timeout, 1000), 60_000) : undefined,
+					headers: params.headers as Record<string, string> | undefined,
+					waybackEnabled: !params.no_wayback,
+					signal,
+				} satisfies FetchOptions);
+				const tags = [
+					`HTTP ${r.status}`,
+					r.source === "wayback" ? `Wayback snapshot ${r.waybackDate}` : null,
+					r.fromCache ? "cached" : null,
+					r.truncated ? "truncated" : null,
+				].filter(Boolean).join(" · ");
 				return {
-					content: [{ type: "text", text: `[${url.href}] (${res.status})\n\n${text}${note}` }],
-					details: { status: res.status },
+					content: [{ type: "text", text: `[${r.finalUrl}]\n[${tags}]\n\n${r.text}` }],
+					details: { status: r.status, source: r.source, fromCache: r.fromCache },
 				};
 			} catch (err: any) {
 				return {
@@ -184,4 +180,93 @@ export default function (pi: ExtensionAPI) {
 			}
 		},
 	});
+
+	// ------------------------------------------------------ specialized tools
+	const apiTool = (
+		name: string,
+		label: string,
+		description: string,
+		fn: (query: string, max: number, signal?: AbortSignal) => Promise<
+			Array<{ title: string; url: string; snippet?: string; meta?: string }>
+		>,
+	) =>
+		pi.registerTool({
+			name,
+			label,
+			description,
+			parameters: Type.Object({
+				query: Type.String({ description: "Search query" }),
+				max: Type.Optional(Type.Number({ description: "Max results (default 8)" })),
+				no_cache: Type.Optional(Type.Boolean({ description: "Skip the 10-minute cache" })),
+			}),
+			async execute(_id, params, signal) {
+				try {
+					const results = await fn(params.query, MAX(params.max), signal);
+					return { content: [{ type: "text", text: fmtResults(results) }], details: { count: results.length } };
+				} catch (err: any) {
+					return {
+						content: [{ type: "text", text: `${label} error: ${err?.message ?? err}` }],
+						details: {},
+					};
+				}
+			},
+		});
+
+	apiTool(
+		"search_stackoverflow",
+		"Stack Overflow Search",
+		"Programming Q&A via the Stack Exchange API (free, no key). Use for error messages, " +
+			"code patterns, debugging. Paste the full error for best results. " +
+			"Shows score, answer count, accepted status and tags.",
+		(q, m, s) => searchStackOverflow(q, m, s),
+	);
+
+	apiTool(
+		"search_wikipedia",
+		"Wikipedia Search",
+		"Encyclopedia search via the MediaWiki API (free, no key). Use for definitions, concepts, " +
+			"history, people, places. Use short topic names, not full questions.",
+		(q, m, s) => searchWikipedia(q, m, s),
+	);
+
+	apiTool(
+		"search_npm",
+		"npm Search",
+		"Search the npm registry (free, no key) for JavaScript/TypeScript packages. " +
+			"Returns name, version, description, quality and popularity scores.",
+		(q, m, s) => searchNpm(q, m, s),
+	);
+
+	pi.registerTool({
+		name: "search_github",
+		label: "GitHub Search",
+		description:
+			"Search GitHub repositories via the API (free, no key; 10 req/min). Returns stars, " +
+			"language, last-updated. Honors GITHUB_TOKEN env var if set (higher rate limits).",
+		parameters: Type.Object({
+			query: Type.String({ description: "Repository search query, e.g. 'websocket library language:python'" }),
+			max: Type.Optional(Type.Number({ description: "Max results (default 8)" })),
+			no_cache: Type.Optional(Type.Boolean({ description: "Skip the 10-minute cache" })),
+		}),
+		async execute(_id, params, signal) {
+			try {
+				const token = process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
+				const results = await searchGithubRepos(params.query, MAX(params.max), signal, token);
+				return { content: [{ type: "text", text: fmtResults(results) }], details: { count: results.length } };
+			} catch (err: any) {
+				return {
+					content: [{ type: "text", text: `GitHub search error: ${err?.message ?? err}` }],
+					details: {},
+				};
+			}
+		},
+	});
+
+	apiTool(
+		"search_hn",
+		"Hacker News Search",
+		"Search Hacker News via the Algolia API (free, no key). Use for tech community opinion, " +
+			"launches, discussions. Returns points, comment counts, dates. Great for 'what do devs think of X'.",
+		(q, m, s) => searchHackerNews(q, m, s),
+	);
 }
