@@ -41,6 +41,8 @@ interface Row {
 	url: string;
 	snippet?: string;
 	meta?: string;
+	/** deep mode: query-relevant excerpt fetched from the page itself */
+	excerpt?: string;
 }
 
 function fmtResults(results: Row[]): string {
@@ -49,7 +51,8 @@ function fmtResults(results: Row[]): string {
 		.map((r, i) => {
 			const lines = [`${i + 1}. ${r.title}`, `   ${r.url}`];
 			if (r.meta) lines.push(`   ${r.meta}`);
-			if (r.snippet) lines.push(`   ${clip(r.snippet, 250)}`);
+			if (r.excerpt) lines.push(`   excerpt: ${clip(r.excerpt, 400)}`);
+			else if (r.snippet) lines.push(`   ${clip(r.snippet, 250)}`);
 			return lines.join("\n");
 		})
 		.join("\n\n");
@@ -222,6 +225,12 @@ export default function (pi: ExtensionAPI) {
 			recency: Type.Optional(Type.String({ description: "d=day, w=week, m=month, y=year (optional)" })),
 			engine: Type.Optional(Type.String({ description: "ddg (default) | brave | bing | multi (parallel merge)" })),
 			refresh: Type.Optional(Type.Boolean({ description: "Skip the 10-minute cache" })),
+			deep: Type.Optional(
+				Type.Union([Type.Boolean(), Type.Number()], {
+					description:
+						"Read the top results and attach a query-relevant excerpt to each. true = 4 results; or a number 1-8. Use when you need facts, not just links — often removes the need for fetch_page.",
+				}),
+			),
 		}),
 		async execute(_id, params, signal, onUpdate) {
 			const started = Date.now();
@@ -255,15 +264,49 @@ export default function (pi: ExtensionAPI) {
 				}
 			};
 			try {
+				let cachedHit = false;
 				if (!params.refresh) {
 					const hit = cacheGet(cacheKey);
-					if (hit)
+					if (hit) {
+						cachedHit = true;
 						return {
 							content: [{ type: "text", text: `[cached]\n${fmtResults(hit)}` }],
 							details: { cached: true, results: hit, count: hit.length, durationMs: Date.now() - started },
 						};
+					}
 				}
 				const { results, engines, errors } = await run();
+				// deep mode: read top results in parallel, attach query-relevant excerpts
+				const deepN = params.deep === true ? 4 : typeof params.deep === "number" ? Math.min(Math.max(Math.round(params.deep), 1), 8) : 0;
+				if (deepN > 0 && results.length > 0 && !cachedHit) {
+					onUpdate?.({
+						content: [{ type: "text", text: "…" }],
+						details: { status: `reading top ${Math.min(deepN, results.length)} results for excerpts…` },
+					});
+					const top = results.slice(0, deepN);
+					const deadline = Date.now() + 25_000;
+					await Promise.all(
+						top.map(async (r) => {
+							const budget = Math.max(deadline - Date.now(), 4_000);
+							try {
+								const page = await smartFetch(r.url, {
+									maxChars: 12_000,
+									timeoutMs: budget,
+									query: params.query,
+									noCache: false,
+									signal,
+								} satisfies FetchOptions);
+								const body = page.text.replace(/\n\n\[\d+ of \d+ passages shown[^\n]*\n?\n?$/, "");
+								const first = body.split("\n\n").find((p) => !/^(via |\[|\d+\.)/.test(p.trim()));
+								if (first && first.trim().length > 80) {
+									(r as Row).excerpt = clip(first.trim().replace(/\n+/g, " "), 500);
+								}
+							} catch {
+								/* ship without excerpt */
+							}
+						}),
+					);
+				}
 				if (results.length > 0) cacheSet(cacheKey, results);
 				return {
 					content: [
