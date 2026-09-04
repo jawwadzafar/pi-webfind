@@ -5,7 +5,8 @@
 <h1 align="center">pi-webfind</h1>
 
 <p align="center">
-  <a href="https://www.npmjs.com/package/pi-webfind"><img alt="npm" src="https://img.shields.io/npm/v/pi-webfind?style=flat-square" /></a>
+  <a href="https://www.npmjs.com/package/pi-webfind"><img alt="npm version" src="https://img.shields.io/npm/v/pi-webfind?style=flat-square&color=cb3837" /></a>
+  <a href="https://www.npmjs.com/package/pi-webfind"><img alt="npm downloads" src="https://img.shields.io/npm/dm/pi-webfind?style=flat-square&label=downloads" /></a>
   <a href="https://github.com/jawwadzafar/pi-webfind/actions/workflows/deploy-docs.yml"><img alt="docs" src="https://img.shields.io/website?url=https%3A%2F%2Fjawwadzafar.github.io%2Fpi-webfind%2F&style=flat-square&label=docs" /></a>
   <a href="https://github.com/jawwadzafar/pi-webfind/blob/main/LICENSE"><img alt="license" src="https://img.shields.io/npm/l/pi-webfind?style=flat-square" /></a>
   <a href="https://github.com/jawwadzafar/pi-webfind/stargazers"><img alt="stars" src="https://img.shields.io/github/stars/jawwadzafar/pi-webfind?style=flat-square&color=b5bd68" /></a>
