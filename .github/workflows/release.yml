@@ -34,8 +34,10 @@ jobs:
           npm pack --dry-run
           COUNT=$(npm pack --dry-run 2>&1 | grep -oE "total files: [0-9]+" | grep -oE "[0-9]+")
           if [ "$COUNT" -gt 20 ]; then echo "tarball has $COUNT files — files allowlist broken?"; exit 1; fi
-      - name: Publish to npm (OIDC trusted publishing — no token needed)
+      - name: Publish to npm
         run: npm publish --provenance
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
       - name: GitHub Release with tarball
         env:
           GH_TOKEN: ${{ github.token }}
