@@ -8,6 +8,8 @@ import { extractPdf, extractPdfViaPoppler } from "./pdf.ts";
 
 export const UA =
 	"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
+// r.jina.ai blocks fake browser UAs but allows honest tool UAs (opposite of most sites)
+const TOOL_UA = "pi-webfind/0.4 (free web research toolkit for pi coding agent; +https://github.com/jawwadzafar/pi-webfind)";
 
 const FETCH_CACHE = createTtlCache(64, 60 * 60 * 1000); // 1h
 const lastHitByHost = new Map<string, number>();
@@ -117,6 +119,52 @@ async function rawFetch(
 	const bytes = Buffer.from(buf);
 	const bodyText = new TextDecoder("utf-8", { fatal: false }).decode(bytes.subarray(0, MAX_BYTES));
 	return { res, bodyText, bytes };
+}
+
+// ---------------------------------------------------- jina reader proxy
+
+let lastJinaFetch = 0;
+async function jinaFetchText(url: URL, opts: FetchOptions): Promise<FetchResult | null> {
+	if (opts.jinaEnabled === false || opts.raw) return null;
+	try {
+		const wait = lastJinaFetch + 3_500 - Date.now();
+		if (wait > 0) await new Promise((r) => setTimeout(r, wait));
+		lastJinaFetch = Date.now();
+		const timeout = AbortSignal.timeout(30_000);
+		const combined = opts.signal ? AbortSignal.any([opts.signal, timeout]) : timeout;
+		const res = await fetch(`https://r.jina.ai/${url.href}`, {
+			headers: { "User-Agent": TOOL_UA, Accept: "text/plain" },
+			signal: combined,
+		});
+		if (!res.ok) return null;
+		let text = await res.text();
+		if (text.trim().length < 40) return null;
+		// jina sometimes returns the block-page itself — detect and reject
+		const hardBlock = /You've been blocked|blocked by network security|log in to your (developer token|Reddit account)/i.test(
+			text.slice(0, 3000),
+		);
+		const softBlock = /Warning: (Target URL returned error|This page maybe requiring CAPTCHA)|Just a moment\.\.\.|Checking your browser/i.test(
+			text.slice(0, 2000),
+		);
+		if (hardBlock) return null;
+		if (softBlock) {
+			// keep only if there's substantial real content after the warning
+			const bodyStart = text.indexOf("Markdown Content:");
+			const body = bodyStart >= 0 ? text.slice(bodyStart) : "";
+			if (body.replace(/\s+/g, " ").trim().length < 600) return null;
+		}
+		return {
+			text: text.slice(0, opts.maxChars),
+			status: 200,
+			finalUrl: url.href,
+			contentType: "text/markdown (via r.jina.ai)",
+			source: "jina",
+			truncated: text.length > opts.maxChars,
+			fromCache: false,
+		};
+	} catch {
+		return null;
+	}
 }
 
 // -------------------------------------------------------------- wayback
@@ -258,6 +306,15 @@ export async function smartFetch(url: string, opts: FetchOptions): Promise<Fetch
 				throw new Error(`HTTP ${res.status}`);
 			}
 			const { text, truncated } = extract(safeUrl, res.headers.get("content-type") ?? "", bodyText, opts, bytes);
+			// Thin content (SPA/bot-wall that 200s) → try jina for real rendered text
+			const looksThin = text.replace(/\s+/g, " ").trim().length < 400 && !opts.raw;
+			if (looksThin) {
+				const jina = await jinaFetchText(safeUrl, opts);
+				if (jina && jina.text.replace(/\s+/g, " ").trim().length > text.replace(/\s+/g, " ").trim().length) {
+					FETCH_CACHE.set(cacheKey, jina);
+					return jina;
+				}
+			}
 			const out: FetchResult = {
 				text,
 				status: res.status,
@@ -278,6 +335,9 @@ export async function smartFetch(url: string, opts: FetchOptions): Promise<Fetch
 			await new Promise((r) => setTimeout(r, 500 * 2 ** attempt));
 		}
 	}
+	// retry loop exhausted → jina as safety net (network errors, bot walls)
+	const jina = await jinaFetchText(safeUrl, opts);
+	if (jina) return jina;
 	throw lastErr instanceof Error ? lastErr : new Error(String(lastErr));
 }
 

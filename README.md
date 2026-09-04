@@ -1,74 +1,74 @@
-# pi-web-search-free
+# pi-webfind
 
-**The complete free web toolkit for the [pi coding agent](https://github.com/earendil-works/pi).**
+**Claude Code-style web research for the [pi coding agent](https://github.com/earendil-works/pi) — free, no API keys, no signups.**
 
-No API keys. No signups. No paid tiers. Zero runtime dependencies.
+Same muscle memory as Claude Code's WebSearch: `⏺ Web Search("query")` headers,
+live status, `✓ 8 results · ddg+brave · 2.1s`, expandable results, document
+reading, grouped synthesis via `/research`. Zero cost.
 
 ```bash
-pi install /path/to/pi-web-search-free                      # local
-pi install git:github.com/jawwadzafar/pi-web-search-free    # once pushed
+pi install /path/to/pi-webfind                             # local
+pi install git:github.com/jawwadzafar/pi-webfind           # once pushed
 ```
+
+## Why "webfind"
+
+- `find`, but for the web — search + fetch + read
+- short, unique on npm and GitHub (zero collisions at publish time)
+- no "-free" suffix: freedom is in the description line, not the name
 
 ## Tools (7)
 
 | Tool | Source | Best for |
 |---|---|---|
-| `web_search` | DuckDuckGo (×3 endpoints) + Brave | news, articles, broad queries |
-| `fetch_page` | any URL | readable extraction, JSON, binaries, blocked pages |
+| `web_search` | DuckDuckGo (×3 endpoints) + Brave, merged | news, articles, broad queries |
+| `fetch_page` | any URL | HTML/PDF/JSON extraction, bot-wall busting |
 | `search_stackoverflow` | Stack Exchange API | error messages, debugging |
 | `search_wikipedia` | MediaWiki API | definitions, concepts, history |
 | `search_npm` | npm registry API | JS/TS packages + quality scores |
 | `search_github` | GitHub API | repos, stars, languages |
 | `search_hn` | HN Algolia API | tech community opinion, launches |
 
-All search tools share a 10-minute LRU cache and accept `max` / `no_cache`.
+Plus: **`/research <topic>`** — runs web+HN+GitHub+Wikipedia in parallel,
+fetches the top pages, shows live progress in the footer widget, then hands
+everything to the model for a grouped "documents worth reading + recurring
+conclusions" briefing (the Claude Code research flow).
 
-### web_search
-
-```
-{ query, max_results?, recency? (d|w|m|y), engine? (ddg|brave|multi), refresh? }
-```
-
-**Engine chain** (falls through on any failure):
-
-1. DDG html (GET) → 2. DDG lite → 3. DDG html (POST, bypasses GET challenges) → 4. Brave HTML (independent index)
-
-`engine: "multi"` runs DDG + Brave in parallel and merges round-robin with
-URL dedupe. If the primary engine throws, the tool retries with `multi`
-automatically before erroring.
-
-### fetch_page
+## Reliability ladder (what happens when engines fight back)
 
 ```
-{ url, max_chars? (default 8000, max 50k), raw?, timeout?, headers?, no_cache?, no_wayback? }
+web_search   DDG html → DDG lite → DDG POST → r.jina.ai proxy (own IP pool)
+             → engine "multi": DDG ∥ Brave in parallel, merged & deduped
+             → any primary failure auto-retries via multi
+
+fetch_page   direct fetch (browser UA, retries ×3 backoff)
+             → 401/403/429/503 → Wayback Machine snapshot
+             → thin/SPA content → r.jina.ai headless render
+             → jina block-pages are detected and rejected (never fake content)
 ```
 
-- Content-type aware: HTML → readable text (article-aware, nav/ads stripped),
-  JSON → pretty-printed, plain text passed through, binaries detected (metadata only)
-- **Wayback Machine fallback**: on 401/403/429/503 automatically retries via
-  archive.org snapshot (tagged in output with snapshot date)
-- **SSRF protection**: localhost/private-range/link-local hosts and non-http protocols blocked
-- Retry with exponential backoff; SPA detection (React/Next/shreddit/…)
-- Custom headers (e.g. `Authorization`) honored; 1h cache; 3MB response cap
+- SSRF protection: localhost / private ranges / link-local blocked
+- Per-host politeness throttle; keyless rate limits respected (jina ~20/min)
+- Honest UA policy: fake-browser UA for engines that want it, honest tool UA
+  for those that don't (r.jina.ai blocks fake browser UAs!)
 
-## Comparison
+## Claude Code parity
 
-| | **pi-web-search-free** | henyo-pi-web | @everyx/pi-web-tools | pi-web-access |
-|---|---|---|---|---|
-| API keys | **none** | none | some | required |
-| Runtime deps | **0** | jsdom+defuddle+unpdf | several | several |
-| Engines | DDG×3 + Brave, merged | DDG | multi+Exa | many (keyed) |
-| Verticals | SO, Wikipedia, npm, GitHub, HN | SO, Wikipedia, npm, GitHub | — | — |
-| Wayback fallback | ✅ | ✅ | — | — |
-| Recency filter | ✅ | — | — | ✅ |
-| SSRF guard | ✅ | ✅ | — | — |
+| Claude Code | pi-webfind |
+|---|---|
+| `⏺ Web Search("…")` rows | ✅ `renderCall` custom rendering |
+| "Did 1 search in 10s" | ✅ `✓ N results · engines · duration` |
+| Live progress | ✅ `onUpdate` partial status ("querying duckduckgo…") |
+| Reads PDFs & documents | ✅ poppler-or-internal extraction, arxiv-verified |
+| Research → grouped summary | ✅ `/research` command + widget progress |
+| WebSearch tool auto-selection | ✅ `promptSnippet`/`promptGuidelines` |
 
 ## Limits (be honest about free)
 
-- Scraping is best-effort; engines can tighten bot defenses anytime — the
-  fallback chain + multi-engine merge is the mitigation
-- Built-in politeness throttle (per-host); don't bypass it
-- Unauthenticated GitHub search: 10 req/min (set `GITHUB_TOKEN` for more — optional)
+- Scraped engines can tighten defenses anytime — the ladder above is the mitigation
+- Public SearXNG instances are IP-rate-limited from cloud IPs (verified); the
+  jina proxy + Brave cover that gap without self-hosting
+- Unauthenticated GitHub: 10 req/min (optional `GITHUB_TOKEN` lifts it)
 
 ## License
 

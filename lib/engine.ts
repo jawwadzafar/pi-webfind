@@ -13,6 +13,8 @@
  */
 const UA =
 	"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
+// r.jina.ai blocks fake browser UAs but allows honest tool UAs (opposite of most sites)
+const TOOL_UA = "pi-webfind/0.4 (free web research toolkit for pi coding agent; +https://github.com/jawwadzafar/pi-webfind)";
 const TIMEOUT_MS = 15_000;
 
 export interface SearchResult {
@@ -157,6 +159,47 @@ function parseBrave(page: string): SearchResult[] {
 
 export type Recency = "d" | "w" | "m" | "y" | undefined;
 
+// ------------------------------------------- jina reader proxy (keyless)
+
+/**
+ * r.jina.ai — keyless reader proxy with its own IP pool and headless browser.
+ * Used as an anti-blocking hop: different IPs than ours, executes JS,
+ * and can relay search-engine HTML when our direct requests get walled.
+ * Rate limit (keyless): ~20 req/min per IP — only used as fallback.
+ */
+const JINA_RATE_MS = 3_500;
+let lastJina = 0;
+
+async function jinaGet(url: string, signal?: AbortSignal): Promise<string> {
+	const wait = lastJina + JINA_RATE_MS - Date.now();
+	if (wait > 0) await sleep(wait, signal);
+	lastJina = Date.now();
+	const timeout = AbortSignal.timeout(30_000);
+	const combined = signal ? AbortSignal.any([signal, timeout]) : timeout;
+	const res = await fetch(`https://r.jina.ai/${url}`, {
+		headers: { "User-Agent": TOOL_UA, Accept: "text/plain" },
+		signal: combined,
+	});
+	if (!res.ok) throw new Error(`jina HTTP ${res.status}`);
+	return res.text();
+}
+
+/** Parse r.jina.ai's markdown output of a DDG html/lite page into results. */
+function parseJinaDdg(md: string): SearchResult[] {
+	const out: SearchResult[] = [];
+	const seen = new Set<string>();
+	// markdown links: [title](https://duckduckgo.com/l/?uddg=ENCODED ...) or direct links
+	for (const m of md.matchAll(/\[([^\]]{4,120})\]\((https?:\/\/[^)]+)\)/g)) {
+		const title = decodeEntities(m[1].replace(/[*_`]/g, "")).trim();
+		const url = unwrapRedirect(m[2]);
+		if (!url || seen.has(url)) continue;
+		if (/duckduckgo\.com(?!\/l\/)|\/y\.js|bing\.com|\.svg/.test(url)) continue;
+		seen.add(url);
+		out.push({ title, url, snippet: "", engine: "ddg-jina" });
+	}
+	return out;
+}
+
 export async function ddgSearch(
 	query: string,
 	maxResults: number,
@@ -166,13 +209,23 @@ export async function ddgSearch(
 	const params = new URLSearchParams({ q: query });
 	if (recency) params.set("df", recency);
 	const enc = params.toString();
+	let directFailed = false;
+
+	// 0. jina proxy (different IP pool — works when our IP is rate-limited)
+	try {
+		const results = parseJinaDdg(await jinaGet(`https://html.duckduckgo.com/html/?${enc}`, signal));
+		if (results.length > 0) return results.slice(0, maxResults);
+	} catch {
+		/* try next */
+	}
 
 	// 1. html GET
 	try {
 		const results = parseDdgHtml(await get(`https://html.duckduckgo.com/html/?${enc}`, signal));
 		if (results.length > 0) return results.slice(0, maxResults);
+		directFailed = true;
 	} catch {
-		/* try next */
+		directFailed = true;
 	}
 
 	// 2. lite GET
@@ -184,8 +237,16 @@ export async function ddgSearch(
 	}
 
 	// 3. html POST (often bypasses GET challenges)
-	const results = parseDdgHtml(await get("https://html.duckduckgo.com/html/", signal, enc));
-	if (results.length === 0) throw new Error("no results from duckduckgo");
+	try {
+		const results = parseDdgHtml(await get("https://html.duckduckgo.com/html/", signal, enc));
+		if (results.length > 0) return results.slice(0, maxResults);
+	} catch {
+		/* fall to jina */
+	}
+
+	// 4. jina relay of lite endpoint (last resort for search)
+	const results = parseJinaDdg(await jinaGet(`https://lite.duckduckgo.com/lite/?${enc}`, signal));
+	if (results.length === 0) throw new Error("no results from duckduckgo (direct + jina proxy)");
 	return results.slice(0, maxResults);
 }
 

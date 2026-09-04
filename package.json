@@ -1,21 +1,40 @@
 {
-  "name": "pi-web-search-free",
-  "version": "0.1.0",
-  "description": "Free multi-engine web search + page fetch for the pi coding agent. DuckDuckGo + Brave, zero API keys, zero paid services.",
+  "name": "pi-webfind",
+  "version": "0.4.0",
+  "description": "Claude Code-style web research for the pi coding agent \u2014 WebSearch, fetch (PDFs, Wayback, anti-block), Stack Overflow, GitHub, HN, Wikipedia, npm. Free, no API keys.",
   "type": "module",
-  "keywords": ["pi-package", "web-search", "duckduckgo", "brave", "search", "free"],
+  "keywords": [
+    "pi-package",
+    "web-search",
+    "websearch",
+    "claude-code",
+    "research",
+    "free",
+    "duckduckgo",
+    "brave",
+    "fetch"
+  ],
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/jawwadzafar/pi-web-search-free.git"
   },
   "pi": {
-    "extensions": ["./extensions"]
+    "extensions": [
+      "./extensions"
+    ]
   },
   "peerDependencies": {
     "@earendil-works/pi-coding-agent": "*",
     "typebox": "*"
   },
-  "files": ["extensions/", "lib/", "README.md", "LICENSE"],
-  "engines": { "node": ">=20" }
+  "files": [
+    "extensions/",
+    "lib/",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=20"
+  }
 }
