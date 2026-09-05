@@ -93,5 +93,5 @@ test("tripwire: deep block prefers page.passages over the first-paragraph hack",
 test("tripwire: smartFetch attaches passages to FetchResult", () => {
 	const src = readFileSync(new URL("../lib/fetcher.ts", import.meta.url), "utf8");
 	assert.match(src, /passages\?: PickedPassage\[\]/);
-	assert.match(src, /text: body \+ footer, truncated, passages \}/);
+	assert.match(src, /text: body \+ footer, truncated, totalChars, .*passages \}/);
 });

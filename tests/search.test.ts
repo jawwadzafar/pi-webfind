@@ -53,6 +53,25 @@ test("parseDdgHtml: challenge markup throws 'ddg challenge' instead of 0 rows", 
 	assert.equal(rows[0].snippet, "snippet text here");
 });
 
+test("searchRace: 202-challenge HTML body throws structured error, lite/POST skipped", async () => {
+	// regression for the WP-04 offline challenge path: get() passes 202 HTML
+	// bodies (DDG's anomaly wall) to the parser, ddgDirect rethrows the
+	// structured error, searchRace skips the brave leg (challenged)
+	const { installFetchMocks, mockText, uninstallFetchMocks, fetchCalls } = await import("./helpers.ts");
+	installFetchMocks();
+	try {
+		mockText("https://html.duckduckgo.com/html/?q=ddg+challenge", `<html><div class="anomaly-modal"></div></html>`, "text/html", 202);
+		const { searchRace } = await import("../lib/engine.ts");
+		const r = await searchRace("ddg challenge", 5, undefined);
+		assert.ok(r.errors.some((e) => e.startsWith("ddg: ddg challenge")), r.errors.join(" | "));
+		// lite + POST + brave are all skipped: html GET, bing, jina relay only
+		assert.ok(!fetchCalls().some((u) => u.includes("lite.duckduckgo")), "lite fetched despite challenge");
+		assert.ok(!fetchCalls().some((u) => u.includes("search.brave.com")), "brave fetched despite challenge");
+	} finally {
+		uninstallFetchMocks();
+	}
+});
+
 // ---------------------------------------------------------- relevance gate
 
 test("relevanceGate: off-topic bucket collapses (R3 q1_bing 8 -> 0)", () => {

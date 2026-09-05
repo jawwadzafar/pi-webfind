@@ -34,6 +34,7 @@ import {
 	searchWikipedia,
 } from "../lib/apis.ts";
 import { smartFetch, type FetchOptions } from "../lib/fetcher.ts";
+import { isOffline } from "../lib/net.ts";
 
 const MAX = (n?: number, dflt = 8, cap = 20) => Math.min(Math.max(n ?? dflt, 1), cap);
 const clip = (s: string, n: number) => (s.length > n ? s.slice(0, n - 1) + "…" : s);
@@ -400,11 +401,14 @@ export default function (pi: ExtensionAPI) {
 					details: { results, count: results.length, engines, errors, stats, durationMs: Date.now() - started },
 				};
 			} catch (err: any) {
+				const advice = isOffline()
+					? "Network appears offline."
+					: "Engines may be rate-limited — wait a minute or retry with refresh=true.";
 				return {
 					content: [
 						{
 							type: "text",
-							text: `Search error: ${err?.message ?? err}. Engines may be rate-limited — wait a minute or retry with engine='multi', refresh=true.`,
+							text: `Search error: ${err?.message ?? err}. ${advice}`,
 						},
 					],
 					details: { error: err?.message ?? String(err), durationMs: Date.now() - started },
@@ -449,6 +453,7 @@ export default function (pi: ExtensionAPI) {
 				}),
 			),
 			max_chars: Type.Optional(Type.Number({ description: "Max text chars (default 8000, max 50000)" })),
+			offset: Type.Optional(Type.Number({ description: "Char offset into the document for paging (from the truncation footer)" })),
 			raw: Type.Optional(Type.Boolean({ description: "Return raw HTML instead of extracted text" })),
 			timeout: Type.Optional(Type.Number({ description: "Timeout ms (1000-60000, default 15000)" })),
 			headers: Type.Optional(
@@ -474,6 +479,7 @@ export default function (pi: ExtensionAPI) {
 				const r = await smartFetch(params.url, {
 					query: (params.query as string | undefined)?.trim() || undefined,
 					maxChars: MAX(params.max_chars, 8000, 50_000),
+					offset: typeof params.offset === "number" ? Math.max(0, Math.floor(params.offset)) : undefined,
 					raw: params.raw,
 					timeoutMs: params.timeout ? Math.min(Math.max(params.timeout, 1000), 60_000) : undefined,
 					headers: params.headers as Record<string, string> | undefined,
@@ -487,6 +493,9 @@ export default function (pi: ExtensionAPI) {
 					`HTTP ${r.status}`,
 					r.source !== "direct" ? `via ${r.source}` : null,
 					r.source === "wayback" && r.waybackDate ? r.waybackDate : null,
+					typeof r.offset === "number" && r.totalChars !== undefined
+						? `${r.offset}\u2013${r.offset + r.text.length} of ${r.totalChars}`
+						: null,
 					...(r.notes ?? []),
 					r.fromCache ? "cached" : null,
 				].filter(Boolean).join(" · ");
@@ -497,6 +506,8 @@ export default function (pi: ExtensionAPI) {
 						source: r.source,
 						fromCache: r.fromCache,
 						chars: r.text.length,
+						totalChars: r.totalChars,
+						offset: r.offset,
 						truncated: r.truncated,
 						notes: r.notes,
 						host: u.host,
@@ -519,6 +530,7 @@ export default function (pi: ExtensionAPI) {
 				const line1 = `Read ${d.chars ?? 0} chars in ${secs(d.durationMs ?? 0)}`;
 				const bits = [`HTTP ${d.status ?? "?"}`];
 				if (d.source && d.source !== "direct") bits.push(`via ${d.source}`);
+				if (typeof d.offset === "number" && d.totalChars) bits.push(`${d.offset}\u2013${(d.offset ?? 0) + (d.chars ?? 0)} of ${d.totalChars}`);
 				if (d.fromCache) bits.push("cached");
 				if (d.truncated) bits.push("truncated");
 				if ((d.notes ?? []).length > 0) bits.push(...d.notes);
