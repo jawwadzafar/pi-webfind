@@ -7,6 +7,7 @@ import { htmlToText } from "./engine.ts";
 import { htmlToMarkdown } from "./extract.ts";
 import { topPassages, type PickedPassage } from "./rank.ts";
 import { extractPdf, extractPdfViaPoppler } from "./pdf.ts";
+import { assertSafeUrl, resolveSafe } from "./safe.ts";
 
 export const UA =
 	"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
@@ -58,39 +59,17 @@ export interface FetchResult {
 	waybackDate?: string;
 	truncated: boolean;
 	fromCache: boolean;
+	/** provenance notes ("jina skipped: custom headers", "body capped at 3MB", "redirected 2×") */
+	notes?: string[];
 	/** ranked passages (incl. scores) from query-aware extraction — set when opts.query was given */
 	passages?: PickedPassage[];
 }
 
-// ------------------------------------------------------------- SSRF guard
+// --------------------------------------------------------------- SSRF guard
+// async address-level checks live in lib/safe.ts; assertSafeUrl is re-exported
+// from there (sync subset for cache keys / adapter routing).
 
-const BLOCKED_HOST_PATTERNS = [
-	/^localhost$/i,
-	/^127\./,
-	/^10\./,
-	/^192\.168\./,
-	/^172\.(1[6-9]|2\d|3[01])\./,
-	/^169\.254\./,
-	/^0\./,
-	/\.local$/i,
-	/^\[?::1\]?$/,
-	/^\[?fc00:/i,
-	/^\[?fe80:/i,
-	/^100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\./, // CGNAT
-];
-
-export function assertSafeUrl(rawUrl: string): URL {
-	let url: URL;
-	try {
-		url = new URL(rawUrl);
-	} catch {
-		throw new Error(`Invalid URL: ${rawUrl}`);
-	}
-	if (!/^https?:$/.test(url.protocol)) throw new Error(`Blocked protocol: ${url.protocol} (use http/https)`);
-	const host = url.hostname;
-	for (const p of BLOCKED_HOST_PATTERNS) if (p.test(host)) throw new Error(`Blocked host (SSRF protection): ${host}`);
-	return url;
-}
+export { assertSafeUrl };
 
 // ------------------------------------------------------------------- helpers
 
@@ -121,34 +100,99 @@ async function rawFetch(
 	url: URL,
 	opts: FetchOptions,
 	extraHeaders: Record<string, string> = {},
-): Promise<{ res: Response; bodyText: string; bytes: Buffer }> {
+): Promise<{ res: Response; bodyText: string; bytes: Buffer; finalUrl: string; capped: boolean; hops: number }> {
 	const timeout = AbortSignal.timeout(opts.timeoutMs ?? DEFAULT_TIMEOUT);
-	const combined = opts.signal ? AbortSignal.any([opts.signal, timeout]) : timeout;
-	await politeDelay(url.host, opts.signal);
-	const res = await fetch(url, {
-		headers: {
-			"User-Agent": UA,
-			Accept: "text/html,application/xhtml+xml,application/json,text/plain;q=0.9,*/*;q=0.5",
-			"Accept-Language": "en-US,en;q=0.9",
-			...extraHeaders,
-			...(opts.headers ?? {}),
-		},
-		redirect: "follow",
-		signal: combined,
-	});
+	const signal = opts.signal ? AbortSignal.any([opts.signal, timeout]) : timeout;
+	let current = await resolveSafe(url);
+	let custom = opts.headers ?? {};
+	let hops = 0;
+	for (let hop = 0; ; hop++) {
+		await politeDelay(current.host, opts.signal);
+		const res = await fetch(current, {
+			headers: {
+				"User-Agent": UA,
+				Accept: "text/html,application/xhtml+xml,application/json,text/plain;q=0.9,*/*;q=0.5",
+				"Accept-Language": "en-US,en;q=0.9",
+				...extraHeaders,
+				...custom,
+			},
+			redirect: "manual",
+			signal,
+		});
+		const loc = res.headers.get("location");
+		if (res.status >= 300 && res.status < 400 && loc) {
+			await res.body?.cancel();
+			if (hop >= MAX_REDIRECTS) throw new Error(`Too many redirects (>${MAX_REDIRECTS}) from ${url.href}`);
+			const next = await resolveSafe(new URL(loc, current)); // throws Blocked host → no retry, no jina
+			if (next.host !== current.host) custom = {}; // drop Authorization etc. across hosts, like browsers
+			current = next;
+			hops++;
+			continue;
+		}
+		const { bytes, capped } = await readCapped(res);
+		const bodyText = new TextDecoder("utf-8", { fatal: false }).decode(bytes);
+		return { res, bodyText, bytes, finalUrl: current.href, capped, hops };
+	}
+}
+
+const MAX_REDIRECTS = 5;
+const SKIP_BODY = /^(image|video|audio|font)\/|^application\/(zip|gzip|x-tar|octet-stream|wasm|sqlite|x-7z-compressed|x-rar)/;
+
+/** Stream the body with a hard cap; skip the download entirely for binary types. */
+async function readCapped(res: Response): Promise<{ bytes: Buffer; capped: boolean }> {
+	const ct = (res.headers.get("content-type") ?? "").split(";")[0]!.trim().toLowerCase();
 	const len = Number(res.headers.get("content-length") ?? 0);
-	if (len > MAX_BYTES) throw new Error(`Response too large: ${(len / 1e6).toFixed(1)}MB`);
-	const buf = await res.arrayBuffer();
-	const bytes = Buffer.from(buf);
-	const bodyText = new TextDecoder("utf-8", { fatal: false }).decode(bytes.subarray(0, MAX_BYTES));
-	return { res, bodyText, bytes };
+	if (ct && SKIP_BODY.test(ct)) {
+		await res.body?.cancel();
+		return { bytes: Buffer.alloc(0), capped: false };
+	}
+	if (len > MAX_BYTES) {
+		await res.body?.cancel();
+		throw new Error(`Response too large: ${(len / 1e6).toFixed(1)}MB`);
+	}
+	if (!res.body) return { bytes: Buffer.alloc(0), capped: false };
+	const reader = res.body.getReader();
+	const chunks: Uint8Array[] = [];
+	let received = 0;
+	for (;;) {
+		const { done, value } = await reader.read();
+		if (done) break;
+		if (received + value.byteLength > MAX_BYTES) {
+			chunks.push(value.subarray(0, MAX_BYTES - received));
+			received = MAX_BYTES;
+			await reader.cancel();
+			return { bytes: Buffer.concat(chunks, received), capped: true };
+		}
+		chunks.push(value);
+		received += value.byteLength;
+	}
+	return { bytes: Buffer.concat(chunks, received), capped: false };
 }
 
 // ---------------------------------------------------- jina reader proxy
 
+const SECRET_PARAM = /^(token|key|api[_-]?key|auth|authorization|sig|signature|secret|password|access[_-]?token|code|session|jwt)$/i;
+const NON_HTML_PATH = /\.(json|xml|txt|csv|pdf|md|yaml|yml|rss|atom)(\?|$)/i;
+
+/** null = allowed; otherwise the reason, recorded in FetchResult.notes. */
+export function jinaBlockReason(url: URL, opts: FetchOptions, contentType?: string): string | null {
+	if (opts.jinaEnabled === false) return "disabled";
+	if (opts.raw) return "raw";
+	if (opts.headers && Object.keys(opts.headers).length > 0) return "custom headers";
+	for (const k of url.searchParams.keys()) if (SECRET_PARAM.test(k)) return `secret-looking param '${k}'`;
+	if (contentType !== undefined) {
+		const ct = contentType.split(";")[0]!.trim().toLowerCase();
+		if (ct && !/html/.test(ct)) return `content-type ${ct}`;
+	} else if (NON_HTML_PATH.test(url.pathname + url.search)) {
+		return "non-HTML path";
+	}
+	return null;
+}
+
 let lastJinaFetch = 0;
-async function jinaFetchText(url: URL, opts: FetchOptions): Promise<FetchResult | null> {
-	if (opts.jinaEnabled === false || opts.raw) return null;
+async function jinaFetchText(url: URL, opts: FetchOptions, contentType?: string): Promise<FetchResult | null> {
+	const why = jinaBlockReason(url, opts, contentType);
+	if (why) return null; // blocked — callers surface the reason via jinaBlockReason when needed
 	try {
 		const wait = lastJinaFetch + 3_500 - Date.now();
 		if (wait > 0) await new Promise((r) => setTimeout(r, wait));
@@ -197,6 +241,9 @@ async function waybackFetch(
 	opts: FetchOptions,
 ): Promise<FetchResult | null> {
 	if (opts.waybackEnabled === false) return null;
+	// An authenticated URL has no useful public snapshot, and the availability
+	// API call would leak the (possibly secret-bearing) URL to archive.org.
+	if (opts.headers && Object.keys(opts.headers).length > 0) return null;
 	try {
 		const api = new URL("https://archive.org/wayback/available");
 		api.searchParams.set("url", url.href);
@@ -209,9 +256,10 @@ async function waybackFetch(
 		const snap = data.archived_snapshots?.closest;
 		if (!snap) return null;
 		const snapUrl = new URL(snap.url);
-		const { res: sres, bodyText, bytes: bytes2 } = await rawFetch(snapUrl, opts);
+		// headers: undefined — custom headers (Authorization etc.) never reach archive.org
+		const { res: sres, bodyText, bytes: bytes2 } = await rawFetch(snapUrl, { ...opts, headers: undefined });
 		if (!sres.ok) return null;
-		const { text, truncated } = extract(snapUrl, sres.headers.get("content-type") ?? "", bodyText, opts, bytes2);
+		const { text, truncated } = extract(snapUrl, sres.headers.get("content-type") ?? "", bodyText, opts, bytes2, Number(sres.headers.get("content-length") ?? 0));
 		return {
 			text,
 			status: 200,
@@ -227,8 +275,6 @@ async function waybackFetch(
 	}
 }
 
-// -------------------------------------------------------------- extraction
-
 const BINARY_TYPES = /^(image\/|video\/|audio\/|application\/(zip|gzip|x-tar|pdf|octet-stream|wasm|sqlite))/;
 function extract(
 	url: URL,
@@ -236,6 +282,7 @@ function extract(
 	body: string,
 	opts: FetchOptions,
 	bytes?: Buffer,
+	contentLength?: number,
 ): { text: string; truncated: boolean } {
 	const ct = contentType.split(";")[0].trim().toLowerCase();
 
@@ -255,10 +302,11 @@ function extract(
 		}
 	}
 
-	// Binary content: metadata only
+	// Binary content: metadata only (body is not downloaded for these types)
 	if (BINARY_TYPES.test(ct)) {
+		const size = contentLength !== undefined && contentLength > 0 ? `${(contentLength / 1e6).toFixed(1)}MB` : "size unknown";
 		return {
-			text: `[binary content: ${ct} — ${body.length} bytes received, not text-extractable]`,
+			text: `[binary content: ${ct} — Content-Length ${size}, not downloaded]`,
 			truncated: false,
 		};
 	}
@@ -357,7 +405,10 @@ async function smartFetchRaw(url: string, opts: FetchOptions): Promise<FetchResu
 	let lastErr: unknown;
 	for (let attempt = 0; attempt < 3; attempt++) {
 		try {
-			const { res, bodyText, bytes } = await rawFetch(safeUrl, opts);
+			const { res, bodyText, bytes, finalUrl, capped, hops } = await rawFetch(safeUrl, opts);
+			const notes: string[] = [];
+			if (capped) notes.push("body capped at 3MB");
+			if (hops > 0) notes.push(`redirected ${hops}×`);
 			if ([401, 403, 429, 503].includes(res.status)) {
 				const wb = await waybackFetch(safeUrl, opts);
 				if (wb) {
@@ -366,22 +417,25 @@ async function smartFetchRaw(url: string, opts: FetchOptions): Promise<FetchResu
 				}
 				if (opts.allowHttpErrors) {
 					const { text, truncated } = extract(safeUrl, res.headers.get("content-type") ?? "", bodyText, opts, bytes);
-					return { text, status: res.status, finalUrl: res.url || safeUrl.href, contentType: res.headers.get("content-type") ?? "", source: "direct", truncated, fromCache: false };
+					return { text, status: res.status, finalUrl, contentType: res.headers.get("content-type") ?? "", source: "direct", truncated, fromCache: false, notes };
 				}
 				throw new Error(`HTTP ${res.status}${res.status === 403 ? " (bot protection?)" : ""}`);
 			}
 			if (!res.ok) {
 				if (opts.allowHttpErrors) {
 					const { text, truncated } = extract(safeUrl, res.headers.get("content-type") ?? "", bodyText, opts, bytes);
-					return { text, status: res.status, finalUrl: res.url || safeUrl.href, contentType: res.headers.get("content-type") ?? "", source: "direct", truncated, fromCache: false };
+					return { text, status: res.status, finalUrl, contentType: res.headers.get("content-type") ?? "", source: "direct", truncated, fromCache: false, notes };
 				}
 				throw new Error(`HTTP ${res.status}`);
 			}
-			const { text, truncated } = extract(safeUrl, res.headers.get("content-type") ?? "", bodyText, opts, bytes);
-			// Thin content (SPA/bot-wall that 200s) → try jina for real rendered text
-			const looksThin = text.replace(/\s+/g, " ").trim().length < 400 && !opts.raw;
+			const ctHeader = res.headers.get("content-type") ?? "";
+			const { text, truncated } = extract(safeUrl, ctHeader, bodyText, opts, bytes, Number(res.headers.get("content-length") ?? 0));
+			// Thin HTML (SPA/bot-wall that 200s) → jina for real rendered text; other types/headers never promoted
+			const looksThin = ctHeader.includes("html") && text.replace(/\s+/g, " ").trim().length < 400 && !opts.raw;
 			if (looksThin) {
-				const jina = await jinaFetchText(safeUrl, opts);
+				const why = jinaBlockReason(safeUrl, opts, ctHeader);
+				if (why && why !== "disabled" && why !== "raw") notes.push(`jina skipped: ${why}`);
+				const jina = await jinaFetchText(safeUrl, opts, ctHeader);
 				if (jina && jina.text.replace(/\s+/g, " ").trim().length > text.replace(/\s+/g, " ").trim().length) {
 					FETCH_CACHE.set(cacheKey, jina);
 					return jina;
@@ -390,11 +444,12 @@ async function smartFetchRaw(url: string, opts: FetchOptions): Promise<FetchResu
 			const out: FetchResult = {
 				text,
 				status: res.status,
-				finalUrl: res.url || safeUrl.href,
-				contentType: res.headers.get("content-type") ?? "",
+				finalUrl,
+				contentType: ctHeader,
 				source: "direct",
-				truncated,
+				truncated: truncated || capped,
 				fromCache: false,
+				notes,
 			};
 			FETCH_CACHE.set(cacheKey, out);
 			return out;
@@ -402,12 +457,13 @@ async function smartFetchRaw(url: string, opts: FetchOptions): Promise<FetchResu
 			lastErr = err;
 			const msg = String((err as Error)?.message ?? err);
 			// don't retry permanent errors
-			if (/Blocked (protocol|host)|Invalid URL|too large/.test(msg)) throw err;
+			if (/Blocked (protocol|host|URL)|Invalid URL|too large|Too many redirects|DNS lookup failed/.test(msg)) throw err;
 			if (opts.signal?.aborted) throw err;
 			await new Promise((r) => setTimeout(r, 500 * 2 ** attempt));
 		}
 	}
-	// retry loop exhausted → jina as safety net (network errors, bot walls)
+	// retry loop exhausted → jina as safety net (network errors, bot walls);
+	// no response headers available, so only the header/param/path rules apply
 	const jina = await jinaFetchText(safeUrl, opts);
 	if (jina) return jina;
 	throw lastErr instanceof Error ? lastErr : new Error(String(lastErr));

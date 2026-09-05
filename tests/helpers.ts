@@ -6,9 +6,17 @@
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { safeConfig } from "../lib/safe.ts";
 
 const realFetch = globalThis.fetch;
 const realHome = process.env.HOME;
+const realLookup = safeConfig.lookup;
+
+/** Reset mock routes/call log between tests (beforeEach without re-installing). */
+export function resetFetchMocks(): void {
+	routes.clear();
+	calls.length = 0;
+}
 
 // Sandbox HOME at module-load time — lib modules construct their disk caches
 // when first imported, which happens during test-file static imports, BEFORE
@@ -21,10 +29,16 @@ const calls: string[] = [];
 let mocking = false;
 
 export function installFetchMocks(): void {
-	if (mocking) return;
+	if (mocking) {
+		resetFetchMocks();
+		return;
+	}
 	mocking = true;
 	routes.clear();
 	calls.length = 0;
+	// resolve every host to a public TEST-NET address so resolveSafe passes
+	// (SSRF-specific tables are set per-test by overwriting safeConfig.lookup)
+	safeConfig.lookup = async (host: string) => [{ address: "203.0.113.5", family: 4 }];
 	globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
 		const url = String(input instanceof Request ? input.url : input);
 		calls.push(url);
@@ -39,6 +53,7 @@ export function uninstallFetchMocks(): void {
 	mocking = false;
 	routes.clear();
 	globalThis.fetch = realFetch;
+	safeConfig.lookup = realLookup;
 	process.env.HOME = realHome;
 }
 

@@ -415,6 +415,7 @@ export default function (pi: ExtensionAPI) {
 			),
 			no_cache: Type.Optional(Type.Boolean({ description: "Skip the 1-hour cache" })),
 			no_wayback: Type.Optional(Type.Boolean({ description: "Disable Wayback Machine fallback" })),
+			no_jina: Type.Optional(Type.Boolean({ description: "Disable the reader-proxy fallback" })),
 			allow_http_errors: Type.Optional(
 				Type.Boolean({
 					description:
@@ -435,11 +436,14 @@ export default function (pi: ExtensionAPI) {
 					headers: params.headers as Record<string, string> | undefined,
 					waybackEnabled: !params.no_wayback,
 					allowHttpErrors: params.allow_http_errors,
+					jinaEnabled: params.no_jina === true ? false : undefined,
 					signal,
 				} satisfies FetchOptions);
 				const tags = [
 					`HTTP ${r.status}`,
-					r.source === "wayback" ? `Wayback ${r.waybackDate}` : null,
+					r.source !== "direct" ? `via ${r.source}` : null,
+					r.source === "wayback" && r.waybackDate ? r.waybackDate : null,
+					...(r.notes ?? []),
 					r.fromCache ? "cached" : null,
 				].filter(Boolean).join(" · ");
 				return {
@@ -450,6 +454,7 @@ export default function (pi: ExtensionAPI) {
 						fromCache: r.fromCache,
 						chars: r.text.length,
 						truncated: r.truncated,
+						notes: r.notes,
 						host: u.host,
 						preview: r.text.slice(0, 300),
 						durationMs: Date.now() - started,
@@ -469,8 +474,7 @@ export default function (pi: ExtensionAPI) {
 			(d) => {
 				const line1 = `Read ${d.chars ?? 0} chars in ${secs(d.durationMs ?? 0)}`;
 				const bits = [`HTTP ${d.status ?? "?"}`];
-				if (d.source === "wayback") bits.push("via Wayback");
-				if (d.source === "jina") bits.push("via r.jina.ai");
+				if (d.source && d.source !== "direct") bits.push(`via ${d.source}`);
 				if (d.fromCache) bits.push("cached");
 				if (d.truncated) bits.push("truncated");
 				return { ok: !d.error, line1, line2: bits.join(" · "), rows: undefined, preview: d.preview };
