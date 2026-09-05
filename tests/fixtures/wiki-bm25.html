@@ -1,0 +1,1656 @@
+<!DOCTYPE html>
+<html class="client-nojs vector-feature-language-in-header-enabled vector-feature-language-in-main-menu-disabled vector-feature-language-in-main-page-header-disabled vector-feature-page-tools-pinned-disabled vector-feature-toc-pinned-clientpref-1 vector-feature-main-menu-pinned-disabled vector-feature-limited-width-clientpref-1 vector-feature-limited-width-content-enabled vector-feature-custom-font-size-clientpref-1 vector-feature-appearance-pinned-clientpref-1 skin-theme-clientpref-day vector-sticky-header-enabled vector-toc-available skin-thumbsize-clientpref-standard" lang="en" dir="ltr">
+<head>
+<meta charset="UTF-8">
+<title>Okapi BM25 - Wikipedia</title>
+<script>(function(){var className="client-js vector-feature-language-in-header-enabled vector-feature-language-in-main-menu-disabled vector-feature-language-in-main-page-header-disabled vector-feature-page-tools-pinned-disabled vector-feature-toc-pinned-clientpref-1 vector-feature-main-menu-pinned-disabled vector-feature-limited-width-clientpref-1 vector-feature-limited-width-content-enabled vector-feature-custom-font-size-clientpref-1 vector-feature-appearance-pinned-clientpref-1 skin-theme-clientpref-day vector-sticky-header-enabled vector-toc-available skin-thumbsize-clientpref-standard";var cookie=document.cookie.match(/(?:^|; )enwikimwclientpreferences=([^;]+)/);if(cookie){cookie[1].split('%2C').forEach(function(pref){className=className.replace(new RegExp('(^| )'+pref.replace(/-clientpref-\w+$|[^\w-]+/g,'')+'-clientpref-\\w+( |$)'),'$1'+pref+'$2');});}document.documentElement.className=className;}());RLCONF={"wgBreakFrames":false,"wgSeparatorTransformTable":["",""],"wgDigitTransformTable":["",""],"wgDefaultDateFormat":"dmy","wgMonthNames":["","January","February","March","April","May","June","July","August","September","October","November","December"],"wgRequestId":"b79cce7e-ff6a-41a3-bc47-587f9475ddcd","wgCanonicalNamespace":"","wgCanonicalSpecialPageName":false,"wgNamespaceNumber":0,"wgPageName":"Okapi_BM25","wgTitle":"Okapi BM25","wgCurRevisionId":1372301996,"wgRevisionId":1372301996,"wgArticleId":9511414,"wgIsArticle":true,"wgIsRedirect":false,"wgAction":"view","wgUserName":null,"wgUserGroups":["*"],"wgCategories":["Articles with short description","Short description matches Wikidata","Ranking functions"],"wgPageViewLanguage":"en","wgPageContentLanguage":"en","wgPageContentModel":"wikitext","wgRelevantPageName":"Okapi_BM25","wgRelevantArticleId":9511414,"wgTempUserName":null,"wgIsProbablyEditable":true,"wgRelevantPageIsProbablyEditable":true,"wgRestrictionEdit":[],"wgRestrictionMove":[],"wgNoticeProject":"wikipedia","wgFlaggedRevsParams":{"tags":{"status":{"levels":1}},"namespaces":[0,4]},"wgConfirmEditCaptchaNeededForGenericEdit":"hcaptcha","wgConfirmEditForceShowCaptcha":false,"wgConfirmEditHCaptchaSiteKey":"5d0c670e-a5f4-4258-ad16-1f42792c9c62","wgMediaViewerOnClick":true,"wgMediaViewerEnabledByDefault":true,"wgMediaViewerMobileBeta":false,"wgPopupsFlags":0,"wgVisualEditor":{"pageLanguageCode":"en","pageLanguageDir":"ltr","pageVariantFallbacks":"en"},"wgMFDisplayWikibaseDescriptions":{"search":true,"watchlist":true,"tagline":false,"nearby":true},"wgWMESchemaEditAttemptStepOversample":false,"wgWMEPageLength":10000,"wgParsoidHtmlVersion":"2.8.0","parsermigration-parsoid":true,"wgPageAssessments":{"Computing":{"class":"C","importance":"Low"},"Computing/WikiProject Computer science":{"class":"C","importance":"Low"},"Computing/WikiProject Software":{"class":"C","importance":"Low"},"Project-independent assessment":{"class":"C","importance":""}},"wgTestKitchenUserExperiments":{"overrides":[],"enrolled":[],"assigned":[],"subject_ids":[]},"wgEditSubmitButtonLabelPublish":true,"wgVisualEditorPageIsDisambiguation":false,"wgULSPosition":"interlanguage","wgULSisCompactLinksEnabled":false,"wgVector2022LanguageInHeader":true,"wgULSisLanguageSelectorEmpty":false,"wgULSLanguageSelectorV2Enabled":true,"wgWikibaseItemId":"Q2068750","wgCheckUserClientHintsHeadersJsApi":["brands","architecture","bitness","fullVersionList","mobile","model","platform","platformVersion"],"wgPersonalDashboardMenuVisible":false};
+RLSTATE={"ext.globalCssJs.user.styles":"ready","site.styles":"ready","user.styles":"ready","ext.globalCssJs.user":"ready","user":"ready","user.options":"loading","ext.math.styles":"ready","ext.cite.parsoid.styles":"ready","ext.cite.styles":"ready","mediawiki.skinning.content.parsoid":"ready","ext.wikimediamessages.styles":"ready","skins.vector.search.codex.styles":"ready","skins.vector.styles":"ready","skins.vector.icons":"ready","ext.visualEditor.desktopArticleTarget.noscript":"ready","ext.uls.interlanguage":"ready","wikibase.client.init":"ready"};RLPAGEMODULES=["ext.math.polyfills","ext.cite.ux-enhancements","site","mediawiki.page.ready","mediawiki.toc","skins.vector.js","ext.centralNotice.geoIP","ext.centralNotice.startUp","ext.gadget.ReferenceTooltips","ext.gadget.switcher","ext.urlShortener.toolbar","ext.centralauth.centralautologin","ext.testKitchen","mmv.bootstrap","ext.popups","ext.visualEditor.desktopArticleTarget.init","ext.echo.centralauth","ext.eventLogging","ext.wikimediaEvents","ext.navigationTiming","ext.uls.interface","ext.cx.eventlogging.campaigns","ext.cx.uls.quick.actions","wikibase.client.vector-2022","wikibase.databox.fromWikidata","ext.checkUser.clientHints","ext.quicksurveys.init"];</script>
+<script>(RLQ=window.RLQ||[]).push(function(){mw.loader.impl(function(){return["user.options@12s5i",function($,jQuery,require,module){mw.user.tokens.set({"patrolToken":"+\\","watchToken":"+\\","csrfToken":"+\\"});
+}];});});</script>
+<link rel="stylesheet" href="/w/load.php?lang=en&amp;modules=ext.cite.parsoid.styles%7Cext.cite.styles%7Cext.math.styles%7Cext.uls.interlanguage%7Cext.visualEditor.desktopArticleTarget.noscript%7Cext.wikimediamessages.styles%7Cmediawiki.skinning.content.parsoid%7Cskins.vector.icons%2Cstyles%7Cskins.vector.search.codex.styles%7Cwikibase.client.init&amp;only=styles&amp;skin=vector-2022">
+<script async="" src="/w/load.php?lang=en&amp;modules=startup&amp;only=scripts&amp;raw=1&amp;skin=vector-2022"></script>
+<meta name="ResourceLoaderDynamicStyles" content="">
+<link rel="stylesheet" href="/w/load.php?lang=en&amp;modules=site.styles&amp;only=styles&amp;skin=vector-2022">
+<meta name="generator" content="MediaWiki 1.47.0-wmf.18">
+<meta name="referrer" content="origin">
+<meta name="referrer" content="origin-when-cross-origin">
+<meta name="robots" content="max-image-preview:standard">
+<meta name="format-detection" content="telephone=no">
+<meta name="viewport" content="width=1120">
+<meta property="og:title" content="Okapi BM25 - Wikipedia">
+<meta property="og:type" content="website">
+<link rel="alternate" type="application/x-wiki" title="Edit this page" href="/w/index.php?title=Okapi_BM25&amp;action=edit">
+<link rel="apple-touch-icon" href="/static/apple-touch/wikipedia.png">
+<link rel="icon" href="/static/favicon/wikipedia.ico">
+<link rel="search" type="application/opensearchdescription+xml" href="/w/rest.php/v1/search" title="Wikipedia (en)">
+<link rel="EditURI" type="application/rsd+xml" href="//en.wikipedia.org/w/api.php?action=rsd">
+<link rel="canonical" href="https://en.wikipedia.org/wiki/Okapi_BM25">
+<link rel="license" href="https://creativecommons.org/licenses/by-sa/4.0/deed.en">
+<link rel="alternate" type="application/atom+xml" title="Wikipedia Atom feed" href="/w/index.php?title=Special:RecentChanges&amp;feed=atom">
+<link rel="dns-prefetch" href="//meta.wikimedia.org" />
+<link rel="dns-prefetch" href="auth.wikimedia.org">
+</head>
+<body class="skin--responsive skin-vector skin-vector-search-vue mediawiki ltr sitedir-ltr mw-hide-empty-elt ns-0 ns-subject mw-editable page-Okapi_BM25 rootpage-Okapi_BM25 skin-vector-2022 action-view">
+<div id="mw-aria-live-region" class="mw-aria-live-region" aria-live="polite"></div><a class="mw-jump-link" href="#bodyContent">Jump to content</a>
+<div class="vector-header-container">
+	<header class="vector-header mw-header no-font-mode-scale">
+		<div class="vector-header-start">
+			<nav class="vector-main-menu-landmark" aria-label="Site">
+				
+<div id="vector-main-menu-dropdown" class="vector-dropdown vector-main-menu-dropdown vector-button-flush-left vector-button-flush-right"  title="Main menu" >
+	<input type="checkbox" id="vector-main-menu-dropdown-checkbox" role="button" aria-haspopup="true" data-event-name="ui.dropdown-vector-main-menu-dropdown" class="vector-dropdown-checkbox "  aria-label="Main menu"   >
+	<label id="vector-main-menu-dropdown-label" for="vector-main-menu-dropdown-checkbox" class="vector-dropdown-label cdx-button cdx-button--fake-button cdx-button--fake-button--enabled cdx-button--weight-quiet cdx-button--icon-only " aria-hidden="true"  ><span class="vector-icon mw-ui-icon-menu mw-ui-icon-wikimedia-menu cdx-button__icon"></span>
+
+<span class="vector-dropdown-label-text">Main menu</span>
+	</label>
+	<div class="vector-dropdown-content">
+
+
+				<div id="vector-main-menu-unpinned-container" class="vector-unpinned-container">
+		
+<div id="vector-main-menu" class="vector-main-menu vector-pinnable-element">
+	<div
+	class="vector-pinnable-header vector-main-menu-pinnable-header vector-pinnable-header-unpinned"
+	data-feature-name="main-menu-pinned"
+	data-pinnable-element-id="vector-main-menu"
+	data-pinned-container-id="vector-main-menu-pinned-container"
+	data-unpinned-container-id="vector-main-menu-unpinned-container"
+>
+	<div class="vector-pinnable-header-label">Main menu</div>
+	<button class="vector-pinnable-header-toggle-button vector-pinnable-header-pin-button" data-event-name="pinnable-header.vector-main-menu.pin" aria-label="Move Main menu to sidebar">move to sidebar</button>
+	<button class="vector-pinnable-header-toggle-button vector-pinnable-header-unpin-button" data-event-name="pinnable-header.vector-main-menu.unpin" aria-label="Hide Main menu">hide</button>
+</div>
+
+	
+<div id="p-navigation" class="vector-menu mw-portlet mw-portlet-navigation"  >
+	<div class="vector-menu-heading">
+		Navigation
+	</div>
+	<div class="vector-menu-content">
+		
+		<ul class="vector-menu-content-list">
+			
+			<li id="n-mainpage-description" class="mw-list-item"><a href="/wiki/Main_Page" title="Visit the main page [z]" accesskey="z"><span>Main page</span></a></li><li id="n-contents" class="mw-list-item"><a href="/wiki/Wikipedia:Contents" title="Guides to browsing Wikipedia"><span>Contents</span></a></li><li id="n-currentevents" class="mw-list-item"><a href="/wiki/Portal:Current_events" title="Articles related to current events"><span>Current events</span></a></li><li id="n-randompage" class="mw-list-item"><a href="/wiki/Special:Random" title="Visit a randomly selected article [x]" accesskey="x"><span>Random article</span></a></li><li id="n-aboutsite" class="mw-list-item"><a href="/wiki/Wikipedia:About" title="Learn about Wikipedia and how it works"><span>About Wikipedia</span></a></li><li id="n-contactpage" class="mw-list-item"><a href="//en.wikipedia.org/wiki/Wikipedia:Contact_us" title="How to contact Wikipedia"><span>Contact us</span></a></li>
+		</ul>
+		
+	</div>
+</div>
+
+	
+<div id="p-interaction" class="vector-menu mw-portlet mw-portlet-interaction"  >
+	<div class="vector-menu-heading">
+		Contribute
+	</div>
+	<div class="vector-menu-content">
+		
+		<ul class="vector-menu-content-list">
+			
+			<li id="n-help" class="mw-list-item"><a href="/wiki/Help:Contents" title="Guidance on how to use and edit Wikipedia"><span>Help</span></a></li><li id="n-introduction" class="mw-list-item"><a href="/wiki/Help:Introduction" title="Learn how to edit Wikipedia"><span>Learn to edit</span></a></li><li id="n-portal" class="mw-list-item"><a href="/wiki/Wikipedia:Community_portal" title="The hub for editors"><span>Community portal</span></a></li><li id="n-recentchanges" class="mw-list-item"><a href="/wiki/Special:RecentChanges" title="A list of recent changes to Wikipedia [r]" accesskey="r"><span>Recent changes</span></a></li><li id="n-upload" class="mw-list-item"><a href="/wiki/Wikipedia:File_upload_wizard" title="Add images or other media for use on Wikipedia"><span>Upload file</span></a></li><li id="n-specialpages" class="mw-list-item"><a href="/wiki/Special:SpecialPages" title="A list of all special pages [q]" accesskey="q"><span>Special pages</span></a></li>
+		</ul>
+		
+	</div>
+</div>
+
+</div>
+
+				</div>
+
+	</div>
+</div>
+
+		</nav>
+			
+<a href="/wiki/Main_Page" class="mw-logo">
+	<img class="mw-logo-icon" src="/static/images/icons/enwiki-25.svg" alt="" aria-hidden="true" height="50" width="50">
+	<span class="mw-logo-container skin-invert">
+		<img class="mw-logo-wordmark" alt="Wikipedia" src="/static/images/mobile/copyright/wikipedia-wordmark-en-25.svg" style="width: 8.75em; height: 1.375em;">
+		<img class="mw-logo-tagline" alt="The Free Encyclopedia" src="/static/images/mobile/copyright/wikipedia-tagline-en-25.svg" width="140" height="11" style="width: 8.75em; height: 0.6875em;">
+	</span>
+</a>
+
+		</div>
+		<div class="vector-header-end">
+			
+<div id="p-search" role="search" class="vector-search-box-vue  vector-search-box-collapses vector-search-box-show-thumbnail vector-search-box-auto-expand-width vector-search-box">
+	<a href="/wiki/Special:Search" class="cdx-button cdx-button--fake-button cdx-button--fake-button--enabled cdx-button--weight-quiet cdx-button--icon-only search-toggle" title="Search Wikipedia [f]" accesskey="f"><span class="vector-icon mw-ui-icon-search mw-ui-icon-wikimedia-search cdx-button__icon"></span>
+
+<span>Search</span>
+	</a>
+	<div class="vector-typeahead-search-container">
+		<div class="cdx-typeahead-search cdx-typeahead-search--show-thumbnail cdx-typeahead-search--auto-expand-width">
+			<form action="/w/index.php" id="searchform" class="cdx-search-input cdx-search-input--has-end-button">
+				<div id="simpleSearch" class="cdx-search-input__input-wrapper"  data-search-loc="header-moved">
+					<div class="cdx-text-input cdx-text-input--has-start-icon">
+						<input
+							class="cdx-text-input__input mw-searchInput" autocomplete="off"
+							 type="search" name="search" placeholder="Search Wikipedia" aria-label="Search Wikipedia" autocapitalize="none" spellcheck="false" title="Search Wikipedia [f]" accesskey="f" id="searchInput"
+							>
+						<span class="cdx-text-input__icon cdx-text-input__start-icon"></span>
+					</div>
+					<input type="hidden" name="title" value="Special:Search">
+				</div>
+				<button class="cdx-button cdx-search-input__end-button">Search</button>
+			</form>
+		</div>
+	</div>
+</div>
+
+			<nav class="vector-user-links vector-user-links-wide" aria-label="Personal tools">
+	<div class="vector-user-links-main">
+	
+<div id="p-vector-user-menu-preferences" class="vector-menu mw-portlet emptyPortlet"  >
+	<div class="vector-menu-content">
+		
+		<ul class="vector-menu-content-list">
+			
+			
+		</ul>
+		
+	</div>
+</div>
+
+	
+<div id="p-vector-user-menu-userpage" class="vector-menu mw-portlet emptyPortlet"  >
+	<div class="vector-menu-content">
+		
+		<ul class="vector-menu-content-list">
+			
+			
+		</ul>
+		
+	</div>
+</div>
+
+	<nav class="vector-appearance-landmark" aria-label="Appearance">
+		
+<div id="vector-appearance-dropdown" class="vector-dropdown "  title="Change the appearance of the page&#039;s font size, width, and color" >
+	<input type="checkbox" id="vector-appearance-dropdown-checkbox" role="button" aria-haspopup="true" data-event-name="ui.dropdown-vector-appearance-dropdown" class="vector-dropdown-checkbox "  aria-label="Appearance"   >
+	<label id="vector-appearance-dropdown-label" for="vector-appearance-dropdown-checkbox" class="vector-dropdown-label cdx-button cdx-button--fake-button cdx-button--fake-button--enabled cdx-button--weight-quiet cdx-button--icon-only " aria-hidden="true"  ><span class="vector-icon mw-ui-icon-appearance mw-ui-icon-wikimedia-appearance cdx-button__icon"></span>
+
+<span class="vector-dropdown-label-text">Appearance</span>
+	</label>
+	<div class="vector-dropdown-content">
+
+
+			<div id="vector-appearance-unpinned-container" class="vector-unpinned-container">
+				
+			</div>
+		
+	</div>
+</div>
+
+	</nav>
+	
+<div id="p-vector-user-menu-notifications" class="vector-menu mw-portlet emptyPortlet"  >
+	<div class="vector-menu-content">
+		
+		<ul class="vector-menu-content-list">
+			
+			
+		</ul>
+		
+	</div>
+</div>
+
+	
+<div id="p-vector-user-menu-overflow" class="vector-menu mw-portlet"  >
+	<div class="vector-menu-content">
+		
+		<ul class="vector-menu-content-list">
+			<li id="pt-sitesupport-2" class="mw-list-item vector-menu-item--collapsible"><a data-mw-interface  href="https://donate.wikimedia.org/?wmf_source=donate&amp;wmf_medium=sidebar&amp;wmf_campaign=en.wikipedia.org&amp;uselang=en" data-mw-donate-attempt="top_link" class=""><span>Donate</span></a>
+</li>
+<li id="pt-createaccount-2" class="mw-list-item vector-menu-item--collapsible"><a data-mw-interface  href="/w/index.php?title=Special:CreateAccount&amp;returnto=Okapi+BM25" title="You are encouraged to create an account and log in; however, it is not mandatory" class=""><span>Create account</span></a>
+</li>
+<li id="pt-login-2" class="mw-list-item vector-menu-item--collapsible"><a data-mw-interface  href="/w/index.php?title=Special:UserLogin&amp;returnto=Okapi+BM25" title="You&#039;re encouraged to log in; however, it&#039;s not mandatory. [o]" accesskey="o" class=""><span>Log in</span></a>
+</li>
+
+			
+		</ul>
+		
+	</div>
+</div>
+
+	</div>
+	
+<div id="vector-user-links-dropdown" class="vector-dropdown vector-user-menu vector-button-flush-right vector-user-menu-logged-out vector-user-links-dropdown--collapsible"  title="Log in and more options" >
+	<input type="checkbox" id="vector-user-links-dropdown-checkbox" role="button" aria-haspopup="true" data-event-name="ui.dropdown-vector-user-links-dropdown" class="vector-dropdown-checkbox "  aria-label="Personal tools"   >
+	<label id="vector-user-links-dropdown-label" for="vector-user-links-dropdown-checkbox" class="vector-dropdown-label cdx-button cdx-button--fake-button cdx-button--fake-button--enabled cdx-button--weight-quiet cdx-button--icon-only " aria-hidden="true"  ><span class="vector-icon mw-ui-icon-userAvatar mw-ui-icon-wikimedia-userAvatar cdx-button__icon"></span>
+
+<span class="vector-dropdown-label-text">Personal tools</span>
+	</label>
+	<div class="vector-dropdown-content">
+
+
+		
+<div id="p-personal" class="vector-menu mw-portlet mw-portlet-personal"  title="User menu" >
+	<div class="vector-menu-content">
+		
+		<ul class="vector-menu-content-list">
+			<li id="pt-sitesupport" class="mw-list-item vector-menu-item--collapsible"><a data-mw-interface  href="https://donate.wikimedia.org/?wmf_source=donate&amp;wmf_medium=sidebar&amp;wmf_campaign=en.wikipedia.org&amp;uselang=en" data-mw-donate-attempt="top_link" class=""><span class="vector-icon mw-ui-icon-heart mw-ui-icon-wikimedia-heart cdx-button__icon"></span>
+
+<span>Donate</span></a>
+</li>
+<li id="pt-createaccount" class="mw-list-item vector-menu-item--collapsible"><a data-mw-interface  href="/w/index.php?title=Special:CreateAccount&amp;returnto=Okapi+BM25" title="You are encouraged to create an account and log in; however, it is not mandatory" class=""><span class="vector-icon mw-ui-icon-userAvatar mw-ui-icon-wikimedia-userAvatar cdx-button__icon"></span>
+
+<span>Create account</span></a>
+</li>
+<li id="pt-login" class="mw-list-item vector-menu-item--collapsible"><a data-mw-interface  href="/w/index.php?title=Special:UserLogin&amp;returnto=Okapi+BM25" title="You&#039;re encouraged to log in; however, it&#039;s not mandatory. [o]" accesskey="o" class=""><span class="vector-icon mw-ui-icon-logIn mw-ui-icon-wikimedia-logIn cdx-button__icon"></span>
+
+<span>Log in</span></a>
+</li>
+
+			
+		</ul>
+		
+	</div>
+</div>
+
+	
+	</div>
+</div>
+
+</nav>
+
+		</div>
+	</header>
+</div>
+<div class="mw-page-container">
+	<div class="mw-page-container-inner">
+		<div class="vector-sitenotice-container">
+			<div id="siteNotice"><!-- CentralNotice --></div>
+		</div>
+		<div class="vector-column-start">
+			<div class="vector-main-menu-container">
+		<div id="mw-navigation">
+			<nav id="mw-panel" class="vector-main-menu-landmark" aria-label="Site">
+				<div id="vector-main-menu-pinned-container" class="vector-pinned-container">
+				
+				</div>
+		</nav>
+		</div>
+	</div>
+	<div class="vector-sticky-pinned-container">
+				<nav id="mw-panel-toc" aria-label="Contents" data-event-name="ui.sidebar-toc" class="mw-table-of-contents-container vector-toc-landmark">
+					<div id="vector-toc-pinned-container" class="vector-pinned-container">
+					<div id="vector-toc" class="vector-toc vector-pinnable-element">
+	<div
+	class="vector-pinnable-header vector-toc-pinnable-header vector-pinnable-header-pinned"
+	data-feature-name="toc-pinned"
+	data-pinnable-element-id="vector-toc"
+	data-pinned-container-id="vector-toc-pinned-container"
+	data-unpinned-container-id="vector-toc-unpinned-container"
+>
+	<h2 class="vector-pinnable-header-label">Contents</h2>
+	<button class="vector-pinnable-header-toggle-button vector-pinnable-header-pin-button" data-event-name="pinnable-header.vector-toc.pin" aria-label="Move Contents to sidebar">move to sidebar</button>
+	<button class="vector-pinnable-header-toggle-button vector-pinnable-header-unpin-button" data-event-name="pinnable-header.vector-toc.unpin" aria-label="Hide Contents">hide</button>
+</div>
+
+
+	<ul class="vector-toc-contents" id="mw-panel-toc-list">
+		<li id="toc-mw-content-text"
+			class="vector-toc-list-item vector-toc-level-1">
+			<a href="#" class="vector-toc-link">
+				<div class="vector-toc-text">(Top)</div>
+			</a>
+		</li>
+		<li id="toc-The_ranking_function"
+		class="vector-toc-list-item vector-toc-level-1 vector-toc-list-item-expanded">
+		<a class="vector-toc-link" href="#The_ranking_function">
+			<div class="vector-toc-text">
+				<span class="vector-toc-numb">1</span>
+				<span>The ranking function</span>
+			</div>
+		</a>
+		
+		<ul id="toc-The_ranking_function-sublist" class="vector-toc-list">
+		</ul>
+	</li>
+	<li id="toc-IDF_information_theoretic_interpretation"
+		class="vector-toc-list-item vector-toc-level-1 vector-toc-list-item-expanded">
+		<a class="vector-toc-link" href="#IDF_information_theoretic_interpretation">
+			<div class="vector-toc-text">
+				<span class="vector-toc-numb">2</span>
+				<span>IDF information theoretic interpretation</span>
+			</div>
+		</a>
+		
+		<ul id="toc-IDF_information_theoretic_interpretation-sublist" class="vector-toc-list">
+		</ul>
+	</li>
+	<li id="toc-Modifications"
+		class="vector-toc-list-item vector-toc-level-1 vector-toc-list-item-expanded">
+		<a class="vector-toc-link" href="#Modifications">
+			<div class="vector-toc-text">
+				<span class="vector-toc-numb">3</span>
+				<span>Modifications</span>
+			</div>
+		</a>
+		
+		<ul id="toc-Modifications-sublist" class="vector-toc-list">
+		</ul>
+	</li>
+	<li id="toc-References"
+		class="vector-toc-list-item vector-toc-level-1 vector-toc-list-item-expanded">
+		<a class="vector-toc-link" href="#References">
+			<div class="vector-toc-text">
+				<span class="vector-toc-numb">4</span>
+				<span>References</span>
+			</div>
+		</a>
+		
+		<ul id="toc-References-sublist" class="vector-toc-list">
+		</ul>
+	</li>
+	<li id="toc-General_references"
+		class="vector-toc-list-item vector-toc-level-1 vector-toc-list-item-expanded">
+		<a class="vector-toc-link" href="#General_references">
+			<div class="vector-toc-text">
+				<span class="vector-toc-numb">5</span>
+				<span>General references</span>
+			</div>
+		</a>
+		
+		<ul id="toc-General_references-sublist" class="vector-toc-list">
+		</ul>
+	</li>
+	<li id="toc-External_links"
+		class="vector-toc-list-item vector-toc-level-1 vector-toc-list-item-expanded">
+		<a class="vector-toc-link" href="#External_links">
+			<div class="vector-toc-text">
+				<span class="vector-toc-numb">6</span>
+				<span>External links</span>
+			</div>
+		</a>
+		
+		<ul id="toc-External_links-sublist" class="vector-toc-list">
+		</ul>
+	</li>
+</ul>
+</div>
+
+					</div>
+		</nav>
+			</div>
+		</div>
+		<div class="mw-content-container">
+			<main id="content" class="mw-body">
+				<header class="mw-body-header vector-page-titlebar no-font-mode-scale">
+					<nav aria-label="Contents" class="vector-toc-landmark">
+						
+<div id="vector-page-titlebar-toc" class="vector-dropdown vector-page-titlebar-toc vector-button-flush-left"  title="Table of Contents" >
+	<input type="checkbox" id="vector-page-titlebar-toc-checkbox" role="button" aria-haspopup="true" data-event-name="ui.dropdown-vector-page-titlebar-toc" class="vector-dropdown-checkbox "  aria-label="Toggle the table of contents"   >
+	<label id="vector-page-titlebar-toc-label" for="vector-page-titlebar-toc-checkbox" class="vector-dropdown-label cdx-button cdx-button--fake-button cdx-button--fake-button--enabled cdx-button--weight-quiet cdx-button--icon-only " aria-hidden="true"  ><span class="vector-icon mw-ui-icon-listBullet mw-ui-icon-wikimedia-listBullet cdx-button__icon"></span>
+
+<span class="vector-dropdown-label-text">Toggle the table of contents</span>
+	</label>
+	<div class="vector-dropdown-content">
+
+
+							<div id="vector-page-titlebar-toc-unpinned-container" class="vector-unpinned-container">
+			</div>
+		
+	</div>
+</div>
+
+					</nav>
+					<h1 id="firstHeading" class="firstHeading mw-first-heading"><span lang="en" dir="ltr"><span class="mw-page-title-main">Okapi BM25</span></span></h1>
+			
+<div id="p-lang-btn" class="vector-dropdown mw-portlet mw-portlet-lang"  >
+	<input type="checkbox" id="p-lang-btn-checkbox" role="button" aria-haspopup="true" data-event-name="ui.dropdown-p-lang-btn" class="vector-dropdown-checkbox mw-interlanguage-selector"  aria-label="9 languages" aria-description="Go to an article in another language. Available in 9 languages"  >
+	<label id="p-lang-btn-label" for="p-lang-btn-checkbox" class="vector-dropdown-label cdx-button cdx-button--fake-button cdx-button--fake-button--enabled cdx-button--weight-quiet cdx-button--action-progressive mw-portlet-lang-heading-9" aria-hidden="true"  ><span class="vector-icon mw-ui-icon-language-progressive mw-ui-icon-wikimedia-language-progressive cdx-button__icon"></span>
+
+<span class="vector-dropdown-label-text">9 languages</span>
+	</label>
+	<div class="vector-dropdown-content">
+
+		<div class="vector-menu-content">
+			
+			<ul class="vector-menu-content-list">
+				
+				<li class="interlanguage-link interwiki-es mw-list-item"><a href="https://es.wikipedia.org/wiki/Okapi_BM25" title="Okapi BM25 – Spanish" lang="es" hreflang="es" data-title="Okapi BM25" data-language-autonym="Español" data-language-local-name="Spanish" class="interlanguage-link-target"><span>Español</span></a></li><li class="interlanguage-link interwiki-fa mw-list-item"><a href="https://fa.wikipedia.org/wiki/%D8%A7%D9%88%DA%A9%D8%A7%D9%BE%DB%8C_%D8%A8%DB%8C%E2%80%8C%D8%A7%D9%85%DB%B2%DB%B5" title="اوکاپی بی‌ام۲۵ – Persian" lang="fa" hreflang="fa" data-title="اوکاپی بی‌ام۲۵" data-language-autonym="فارسی" data-language-local-name="Persian" class="interlanguage-link-target"><span>فارسی</span></a></li><li class="interlanguage-link interwiki-fr mw-list-item"><a href="https://fr.wikipedia.org/wiki/Okapi_BM25" title="Okapi BM25 – French" lang="fr" hreflang="fr" data-title="Okapi BM25" data-language-autonym="Français" data-language-local-name="French" class="interlanguage-link-target"><span>Français</span></a></li><li class="interlanguage-link interwiki-ja mw-list-item"><a href="https://ja.wikipedia.org/wiki/Okapi_BM25" title="Okapi BM25 – Japanese" lang="ja" hreflang="ja" data-title="Okapi BM25" data-language-autonym="日本語" data-language-local-name="Japanese" class="interlanguage-link-target"><span>日本語</span></a></li><li class="interlanguage-link interwiki-pl mw-list-item"><a href="https://pl.wikipedia.org/wiki/Okapi_BM25" title="Okapi BM25 – Polish" lang="pl" hreflang="pl" data-title="Okapi BM25" data-language-autonym="Polski" data-language-local-name="Polish" class="interlanguage-link-target"><span>Polski</span></a></li><li class="interlanguage-link interwiki-ru mw-list-item"><a href="https://ru.wikipedia.org/wiki/Okapi_BM25" title="Okapi BM25 – Russian" lang="ru" hreflang="ru" data-title="Okapi BM25" data-language-autonym="Русский" data-language-local-name="Russian" class="interlanguage-link-target"><span>Русский</span></a></li><li class="interlanguage-link interwiki-uk mw-list-item"><a href="https://uk.wikipedia.org/wiki/Okapi_BM25" title="Okapi BM25 – Ukrainian" lang="uk" hreflang="uk" data-title="Okapi BM25" data-language-autonym="Українська" data-language-local-name="Ukrainian" class="interlanguage-link-target"><span>Українська</span></a></li><li class="interlanguage-link interwiki-vi mw-list-item"><a href="https://vi.wikipedia.org/wiki/Okapi_BM25" title="Okapi BM25 – Vietnamese" lang="vi" hreflang="vi" data-title="Okapi BM25" data-language-autonym="Tiếng Việt" data-language-local-name="Vietnamese" class="interlanguage-link-target"><span>Tiếng Việt</span></a></li><li class="interlanguage-link interwiki-zh-yue mw-list-item"><a href="https://zh-yue.wikipedia.org/wiki/Okapi_BM25" title="Okapi BM25 – Cantonese" lang="yue" hreflang="yue" data-title="Okapi BM25" data-language-autonym="粵語" data-language-local-name="Cantonese" class="interlanguage-link-target"><span>粵語</span></a></li>
+			</ul>
+			<div class="after-portlet after-portlet-lang"><span class="wb-langlinks-edit wb-langlinks-link"><a href="https://www.wikidata.org/wiki/Special:EntityPage/Q2068750#sitelinks-wikipedia" title="Edit interlanguage links" class="wbc-editpage">Edit links</a></span></div>
+		</div>
+
+	</div>
+</div>
+</header>
+				<div class="vector-page-toolbar">
+					<div class="vector-page-toolbar-container">
+						<div id="left-navigation">
+							<nav aria-label="Namespaces">
+								
+<div id="p-associated-pages" class="vector-menu vector-menu-tabs mw-portlet mw-portlet-associated-pages"  >
+	<div class="vector-menu-content">
+		
+		<ul class="vector-menu-content-list">
+			<li id="ca-nstab-main" class="selected mw-list-item vector-tab-noicon"><a data-mw-interface  href="/wiki/Okapi_BM25" title="View the content page [c]" accesskey="c" class=""><span>Article</span></a>
+</li>
+<li id="ca-talk" class="mw-list-item vector-tab-noicon"><a data-mw-interface  href="/wiki/Talk:Okapi_BM25" rel="discussion" title="Discuss improvements to the content page [t]" accesskey="t" class=""><span>Talk</span></a>
+</li>
+
+			
+		</ul>
+		
+	</div>
+</div>
+
+								
+<div id="vector-variants-dropdown" class="vector-dropdown emptyPortlet"  >
+	<input type="checkbox" id="vector-variants-dropdown-checkbox" role="button" aria-haspopup="true" data-event-name="ui.dropdown-vector-variants-dropdown" class="vector-dropdown-checkbox " aria-label="Change language variant"    >
+	<label id="vector-variants-dropdown-label" for="vector-variants-dropdown-checkbox" class="vector-dropdown-label cdx-button cdx-button--fake-button cdx-button--fake-button--enabled cdx-button--weight-quiet" aria-hidden="true"  ><span class="vector-dropdown-label-text">English</span>
+	</label>
+	<div class="vector-dropdown-content">
+
+
+					
+<div id="p-variants" class="vector-menu mw-portlet mw-portlet-variants emptyPortlet"  >
+	<div class="vector-menu-content">
+		
+		<ul class="vector-menu-content-list">
+			
+			
+		</ul>
+		
+	</div>
+</div>
+
+				
+	</div>
+</div>
+
+							</nav>
+						</div>
+						<div id="right-navigation" class="vector-collapsible">
+							<nav aria-label="Views">
+			    
+<div id="p-views" class="vector-menu vector-menu-tabs mw-portlet mw-portlet-views"  >
+	<div class="vector-menu-content">
+		
+		<ul class="vector-menu-content-list">
+			<li id="ca-view" class="selected mw-list-item vector-menu-item--collapsible vector-tab-noicon"><a data-mw-interface  href="/wiki/Okapi_BM25" class=""><span>Read</span></a>
+</li>
+<li id="ca-edit" class="mw-list-item vector-menu-item--collapsible vector-tab-noicon"><a data-mw-interface  href="/w/index.php?title=Okapi_BM25&amp;action=edit" title="Edit this page [e]" accesskey="e" class=""><span>Edit</span></a>
+</li>
+<li id="ca-history" class="mw-list-item vector-menu-item--collapsible vector-tab-noicon"><a data-mw-interface  href="/w/index.php?title=Okapi_BM25&amp;action=history" title="Past revisions of this page [h]" accesskey="h" class=""><span>View history</span></a>
+</li>
+
+			
+		</ul>
+		
+	</div>
+</div>
+
+			</nav>
+
+							<nav class="vector-page-tools-landmark" aria-label="Page tools">
+								
+<div id="vector-page-tools-dropdown" class="vector-dropdown vector-page-tools-dropdown"  >
+	<input type="checkbox" id="vector-page-tools-dropdown-checkbox" role="button" aria-haspopup="true" data-event-name="ui.dropdown-vector-page-tools-dropdown" class="vector-dropdown-checkbox "  aria-label="Tools"   >
+	<label id="vector-page-tools-dropdown-label" for="vector-page-tools-dropdown-checkbox" class="vector-dropdown-label cdx-button cdx-button--fake-button cdx-button--fake-button--enabled cdx-button--weight-quiet cdx-button--icon-only " aria-hidden="true"  ><span class="vector-icon mw-ui-icon-verticalEllipsis mw-ui-icon-wikimedia-verticalEllipsis cdx-button__icon"></span>
+
+<span class="vector-dropdown-label-text">Tools</span>
+	</label>
+	<div class="vector-dropdown-content">
+
+
+									<div id="vector-page-tools-unpinned-container" class="vector-unpinned-container">
+						
+<div id="vector-page-tools" class="vector-page-tools vector-pinnable-element">
+	<div
+	class="vector-pinnable-header vector-page-tools-pinnable-header vector-pinnable-header-unpinned"
+	data-feature-name="page-tools-pinned"
+	data-pinnable-element-id="vector-page-tools"
+	data-pinned-container-id="vector-page-tools-pinned-container"
+	data-unpinned-container-id="vector-page-tools-unpinned-container"
+>
+	<div class="vector-pinnable-header-label">Tools</div>
+	<button class="vector-pinnable-header-toggle-button vector-pinnable-header-pin-button" data-event-name="pinnable-header.vector-page-tools.pin" aria-label="Move Tools to sidebar">move to sidebar</button>
+	<button class="vector-pinnable-header-toggle-button vector-pinnable-header-unpin-button" data-event-name="pinnable-header.vector-page-tools.unpin" aria-label="Hide Tools">hide</button>
+</div>
+
+	
+<div id="p-cactions" class="vector-menu mw-portlet mw-portlet-cactions emptyPortlet vector-has-collapsible-items"  >
+	<div class="vector-menu-heading">
+		Actions
+	</div>
+	<div class="vector-menu-content">
+		
+		<ul class="vector-menu-content-list">
+			<li id="ca-view-more" class="selected mw-list-item vector-menu-item--collapsible"><a data-mw-interface  href="/wiki/Okapi_BM25" class=""><span class="vector-icon mw-ui-icon-eye mw-ui-icon-wikimedia-eye cdx-button__icon"></span>
+
+<span>Read</span></a>
+</li>
+<li id="ca-edit-more" class="mw-list-item vector-menu-item--collapsible"><a data-mw-interface  href="/w/index.php?title=Okapi_BM25&amp;action=edit" title="Edit this page [e]" accesskey="e" class=""><span class="vector-icon mw-ui-icon-edit mw-ui-icon-wikimedia-edit cdx-button__icon"></span>
+
+<span>Edit</span></a>
+</li>
+<li id="ca-history-more" class="mw-list-item vector-menu-item--collapsible"><a data-mw-interface  href="/w/index.php?title=Okapi_BM25&amp;action=history" title="Past revisions of this page [h]" accesskey="h" class=""><span class="vector-icon mw-ui-icon-history mw-ui-icon-wikimedia-history cdx-button__icon"></span>
+
+<span>View history</span></a>
+</li>
+
+			
+		</ul>
+		
+	</div>
+</div>
+
+<div id="p-tb" class="vector-menu mw-portlet mw-portlet-tb"  >
+	<div class="vector-menu-heading">
+		General
+	</div>
+	<div class="vector-menu-content">
+		
+		<ul class="vector-menu-content-list">
+			
+			<li id="t-whatlinkshere" class="mw-list-item"><a href="/wiki/Special:WhatLinksHere/Okapi_BM25" title="List of all English Wikipedia pages containing links to this page [j]" accesskey="j"><span>What links here</span></a></li><li id="t-recentchangeslinked" class="mw-list-item"><a href="/wiki/Special:RecentChangesLinked/Okapi_BM25" rel="nofollow" title="Recent changes in pages linked from this page [k]" accesskey="k"><span>Related changes</span></a></li><li id="t-upload" class="mw-list-item"><a href="//en.wikipedia.org/wiki/Wikipedia:File_Upload_Wizard" title="Upload files [u]" accesskey="u"><span>Upload file</span></a></li><li id="t-permalink" class="mw-list-item"><a href="/w/index.php?title=Okapi_BM25&amp;oldid=1372301996" title="Permanent link to this revision of this page"><span>Permanent link</span></a></li><li id="t-info" class="mw-list-item"><a href="/w/index.php?title=Okapi_BM25&amp;action=info" title="More information about this page"><span>Page information</span></a></li><li id="t-cite" class="mw-list-item"><a href="/w/index.php?title=Special:CiteThisPage&amp;page=Okapi_BM25&amp;id=1372301996&amp;wpFormIdentifier=titleform" title="Information on how to cite this page"><span>Cite this page</span></a></li><li id="t-urlshortener" class="mw-list-item"><a href="/w/index.php?title=Special:UrlShortener&amp;url=https%3A%2F%2Fen.wikipedia.org%2Fwiki%2FOkapi_BM25"><span>Get shortened URL</span></a></li><li class="mw-list-item"><a href="/w/index.php?title=Okapi_BM25&amp;useparsoid=0"><span>Switch to legacy parser</span></a></li>
+		</ul>
+		
+	</div>
+</div>
+
+<div id="p-coll-print_export" class="vector-menu mw-portlet mw-portlet-coll-print_export"  >
+	<div class="vector-menu-heading">
+		Print/export
+	</div>
+	<div class="vector-menu-content">
+		
+		<ul class="vector-menu-content-list">
+			
+			<li id="coll-download-as-rl" class="mw-list-item"><a href="/w/index.php?title=Special:DownloadAsPdf&amp;page=Okapi_BM25&amp;action=show-download-screen" title="Download this page as a PDF file"><span>Download as PDF</span></a></li><li id="t-print" class="mw-list-item"><a href="/w/index.php?title=Okapi_BM25&amp;printable=yes" title="Printable version of this page [p]" accesskey="p"><span>Printable version</span></a></li>
+		</ul>
+		
+	</div>
+</div>
+
+<div id="p-wikibase-otherprojects" class="vector-menu mw-portlet mw-portlet-wikibase-otherprojects"  >
+	<div class="vector-menu-heading">
+		In other projects
+	</div>
+	<div class="vector-menu-content">
+		
+		<ul class="vector-menu-content-list">
+			
+			<li id="t-wikibase" class="wb-otherproject-link wb-otherproject-wikibase-dataitem mw-list-item"><a href="https://www.wikidata.org/wiki/Special:EntityPage/Q2068750" title="Structured data on this page hosted by Wikidata [g]" accesskey="g"><span>Wikidata item</span></a></li>
+		</ul>
+		
+	</div>
+</div>
+
+</div>
+
+									</div>
+				
+	</div>
+</div>
+
+							</nav>
+						</div>
+					</div>
+				</div>
+				<div class="vector-column-end no-font-mode-scale">
+					<div class="vector-sticky-pinned-container">
+						<nav class="vector-page-tools-landmark" aria-label="Page tools">
+							<div id="vector-page-tools-pinned-container" class="vector-pinned-container">
+				
+							</div>
+		</nav>
+						<nav class="vector-appearance-landmark" aria-label="Appearance">
+							<div id="vector-appearance-pinned-container" class="vector-pinned-container">
+				<div id="vector-appearance" class="vector-appearance vector-pinnable-element">
+	<div
+	class="vector-pinnable-header vector-appearance-pinnable-header vector-pinnable-header-pinned"
+	data-feature-name="appearance-pinned"
+	data-pinnable-element-id="vector-appearance"
+	data-pinned-container-id="vector-appearance-pinned-container"
+	data-unpinned-container-id="vector-appearance-unpinned-container"
+>
+	<div class="vector-pinnable-header-label">Appearance</div>
+	<button class="vector-pinnable-header-toggle-button vector-pinnable-header-pin-button" data-event-name="pinnable-header.vector-appearance.pin" aria-label="Move Appearance to sidebar">move to sidebar</button>
+	<button class="vector-pinnable-header-toggle-button vector-pinnable-header-unpin-button" data-event-name="pinnable-header.vector-appearance.unpin" aria-label="Hide Appearance">hide</button>
+</div>
+
+
+</div>
+
+							</div>
+		</nav>
+					</div>
+				</div>
+				<div id="bodyContent" class="vector-body" aria-labelledby="firstHeading" data-mw-ve-target-container>
+					<div class="vector-body-before-content">
+							<div class="mw-indicators">
+		</div>
+
+						<div id="siteSub" class="noprint">From Wikipedia, the free encyclopedia</div>
+					</div>
+					<div id="contentSub"><div id="mw-content-subtitle"></div></div>
+					
+					
+					<div id="mw-content-text" class="mw-body-content"><div class="mw-content-ltr mw-parser-output" lang="en" dir="ltr" data-mw-parsoid-version="0.24.0.0-alpha21" data-mw-html-version="2.8.0"><section data-mw-section-id="0" id="mwAQ"><div class="shortdescription nomobile noexcerpt noprint searchaux" style="display:none" about="#mwt1" typeof="mw:Transclusion" id="mwAg" data-mw='{"parts":[{"template":{"target":{"wt":"short description","href":"./Template:Short_description"},"params":{"1":{"wt":"Ranking function used by search engines"}},"i":0}}]}'>Ranking function used by search engines</div><span class="mw-empty-elt" about="#mwt1"><link rel="mw:PageProp/Category" href="./Category:Articles_with_short_description"/><link rel="mw:PageProp/Category" href="./Category:Short_description_matches_Wikidata"/></span>
+<p id="mwAw">In <a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Information_retrieval" title="Information retrieval" id="mwBA">information retrieval</a>, <b id="mwBQ">Okapi BM25</b> (<i id="mwBg">BM</i> is an abbreviation of <i id="mwBw">best matching</i>) is a <a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Ranking_function" title="Ranking function" class="mw-redirect" id="mwCA">ranking function</a> used by <a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Search_engine" title="Search engine" id="mwCQ">search engines</a> to estimate the <a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Relevance_(information_retrieval)" title="Relevance (information retrieval)" id="mwCg">relevance</a> of documents to a given search query. It is based on the <a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Probabilistic_relevance_model" title="Probabilistic relevance model" id="mwCw">probabilistic retrieval framework</a> developed in the 1970s and 1980s by <a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Stephen_E._Robertson" title="Stephen E. Robertson" class="mw-redirect" id="mwDA">Stephen E. Robertson</a>, <a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Karen_Spärck_Jones" title="Karen Spärck Jones" id="mwDQ">Karen Spärck Jones</a>, and others.</p>
+
+<p id="mwDg">The name of the actual ranking function is <i id="mwDw">BM25</i>. The fuller name, <i id="mwEA">Okapi BM25</i>, includes the name of the first system to use it, which was the Okapi information retrieval system, implemented at <a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/London" title="London" id="mwEQ">London</a>'s <a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/City_University,_London" title="City University, London" class="mw-redirect" id="mwEg">City University</a><sup about="#mwt4" class="mw-ref reference" id="cite_ref-1" rel="dc:references" typeof="mw:Extension/ref" data-mw='{"name":"ref","attrs":{},"body":{"id":"mw-reference-text-cite_note-1"}}'><a href="#cite_note-1" id="mwEw"><span class="mw-reflink-text" id="mwFA"><span class="cite-bracket" id="mwFQ">[</span>1<span class="cite-bracket" id="mwFg">]</span></span></a></sup> in the 1980s and 1990s. BM25 and its newer variants, e.g. BM25F (a version of BM25 that can take document structure and <a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Anchor_text" title="Anchor text" id="mwFw">anchor text</a> into account), represent <a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/TF-IDF" title="TF-IDF" class="mw-redirect" id="mwGA">TF-IDF</a>-like retrieval functions used in <a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Document_retrieval" title="Document retrieval" id="mwGQ">document retrieval</a>.<sup about="#mwt5" class="mw-ref reference" id="cite_ref-robertson2009_2-0" rel="dc:references" typeof="mw:Extension/ref" data-mw='{"name":"ref","attrs":{"name":"robertson2009"}}'><a href="#cite_note-robertson2009-2" id="mwGg"><span class="mw-reflink-text" id="mwGw"><span class="cite-bracket" id="mwHA">[</span>2<span class="cite-bracket" id="mwHQ">]</span></span></a></sup></p>
+
+<meta property="mw:PageProp/toc" id="mwHg" data-mw='{"autoGenerated":true}'/></section><section data-mw-section-id="1" id="mwHw" aria-labelledby="The_ranking_function"><div class="mw-heading mw-heading2"><h2 id="The_ranking_function">The ranking function</h2><span class="mw-editsection"><span class="mw-editsection-bracket">[</span><a href="/w/index.php?title=Okapi_BM25&amp;action=edit&amp;section=1" title="Edit section: The ranking function"><span>edit</span></a><span class="mw-editsection-bracket">]</span></span></div>
+
+<p id="mwIA">BM25 is a <a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Bag_of_words_model" title="Bag of words model" class="mw-redirect" id="mwIQ">bag-of-words</a> retrieval function that ranks a set of documents based on the query terms appearing in each document, regardless of their proximity within the document. It is a family of scoring functions with slightly different components and parameters. One of the most prominent instantiations of the function is as follows.</p>
+
+<p id="mwIg">Given a query <span class="texhtml mvar" style="font-style:italic;" about="#mwt6" typeof="mw:Transclusion" id="mwIw" data-mw='{"parts":[{"template":{"target":{"wt":"mvar","href":"./Template:Mvar"},"params":{"1":{"wt":"Q"}},"i":0}}]}'>Q</span>, containing keywords <span class="mwe-math-element mwe-math-element-inline" typeof="mw:Extension/math" about="#mwt8" id="mwJA" data-mw='{"name":"math","attrs":{},"body":{"extsrc":"q_1, ..., q_n"}}'><span class="mwe-math-mathml-inline mwe-math-mathml-a11y" style="display: none;"><math xmlns="http://www.w3.org/1998/Math/MathML" class="mathjax_ignore" alttext="{\displaystyle q_{1},...,q_{n}}">
+  <semantics>
+    <mrow class="MJX-TeXAtom-ORD">
+      <mstyle displaystyle="true" scriptlevel="0">
+        <msub>
+          <mi>q</mi>
+          <mrow class="MJX-TeXAtom-ORD">
+            <mn>1</mn>
+          </mrow>
+        </msub>
+        <mo>,</mo>
+        <mo>.</mo>
+        <mo>.</mo>
+        <mo>.</mo>
+        <mo>,</mo>
+        <msub>
+          <mi>q</mi>
+          <mrow class="MJX-TeXAtom-ORD">
+            <mi>n</mi>
+          </mrow>
+        </msub>
+      </mstyle>
+    </mrow>
+    <annotation encoding="application/x-tex">{\displaystyle q_{1},...,q_{n}}</annotation>
+  </semantics>
+</math></span><img src="https://wikimedia.org/api/rest_v1/media/math/render/svg/4024517280628a21186b246939a2cc89c937f7e3" class="mwe-math-fallback-image-inline mw-invert skin-invert" aria-hidden="true" style="vertical-align: -0.671ex; width:9.516ex; height:2.009ex;" alt="{\displaystyle q_{1},...,q_{n}}"/></span>, the BM25 score of a document <span class="texhtml mvar" style="font-style:italic;" about="#mwt7" typeof="mw:Transclusion" id="mwJQ" data-mw='{"parts":[{"template":{"target":{"wt":"mvar","href":"./Template:Mvar"},"params":{"1":{"wt":"D"}},"i":0}}]}'>D</span> is:</p>
+
+<dl id="mwJg"><dd id="mwJw"><span class="mwe-math-element mwe-math-element-inline" typeof="mw:Extension/math" about="#mwt9" id="mwKA" data-mw='{"name":"math","attrs":{},"body":{"extsrc":" \\text{score}(D,Q) = \\sum_{i=1}^{n} \\text{IDF}(q_i) \\cdot \\frac{f(q_i, D) \\cdot (k_1 + 1)}{f(q_i, D) + k_1 \\cdot \\left(1 - b + b \\cdot \\frac{|D|}{\\text{avgdl}}\\right)}"}}'><span class="mwe-math-mathml-inline mwe-math-mathml-a11y" style="display: none;"><math xmlns="http://www.w3.org/1998/Math/MathML" class="mathjax_ignore" alttext="{\displaystyle {\text{score}}(D,Q)=\sum _{i=1}^{n}{\text{IDF}}(q_{i})\cdot {\frac {f(q_{i},D)\cdot (k_{1}+1)}{f(q_{i},D)+k_{1}\cdot \left(1-b+b\cdot {\frac {|D|}{\text{avgdl}}}\right)}}}">
+  <semantics>
+    <mrow class="MJX-TeXAtom-ORD">
+      <mstyle displaystyle="true" scriptlevel="0">
+        <mrow class="MJX-TeXAtom-ORD">
+          <mtext>score</mtext>
+        </mrow>
+        <mo stretchy="false">(</mo>
+        <mi>D</mi>
+        <mo>,</mo>
+        <mi>Q</mi>
+        <mo stretchy="false">)</mo>
+        <mo>=</mo>
+        <munderover>
+          <mo>∑<!-- ∑ --></mo>
+          <mrow class="MJX-TeXAtom-ORD">
+            <mi>i</mi>
+            <mo>=</mo>
+            <mn>1</mn>
+          </mrow>
+          <mrow class="MJX-TeXAtom-ORD">
+            <mi>n</mi>
+          </mrow>
+        </munderover>
+        <mrow class="MJX-TeXAtom-ORD">
+          <mtext>IDF</mtext>
+        </mrow>
+        <mo stretchy="false">(</mo>
+        <msub>
+          <mi>q</mi>
+          <mrow class="MJX-TeXAtom-ORD">
+            <mi>i</mi>
+          </mrow>
+        </msub>
+        <mo stretchy="false">)</mo>
+        <mo>⋅<!-- ⋅ --></mo>
+        <mrow class="MJX-TeXAtom-ORD">
+          <mfrac>
+            <mrow>
+              <mi>f</mi>
+              <mo stretchy="false">(</mo>
+              <msub>
+                <mi>q</mi>
+                <mrow class="MJX-TeXAtom-ORD">
+                  <mi>i</mi>
+                </mrow>
+              </msub>
+              <mo>,</mo>
+              <mi>D</mi>
+              <mo stretchy="false">)</mo>
+              <mo>⋅<!-- ⋅ --></mo>
+              <mo stretchy="false">(</mo>
+              <msub>
+                <mi>k</mi>
+                <mrow class="MJX-TeXAtom-ORD">
+                  <mn>1</mn>
+                </mrow>
+              </msub>
+              <mo>+</mo>
+              <mn>1</mn>
+              <mo stretchy="false">)</mo>
+            </mrow>
+            <mrow>
+              <mi>f</mi>
+              <mo stretchy="false">(</mo>
+              <msub>
+                <mi>q</mi>
+                <mrow class="MJX-TeXAtom-ORD">
+                  <mi>i</mi>
+                </mrow>
+              </msub>
+              <mo>,</mo>
+              <mi>D</mi>
+              <mo stretchy="false">)</mo>
+              <mo>+</mo>
+              <msub>
+                <mi>k</mi>
+                <mrow class="MJX-TeXAtom-ORD">
+                  <mn>1</mn>
+                </mrow>
+              </msub>
+              <mo>⋅<!-- ⋅ --></mo>
+              <mrow>
+                <mo>(</mo>
+                <mrow>
+                  <mn>1</mn>
+                  <mo>−<!-- − --></mo>
+                  <mi>b</mi>
+                  <mo>+</mo>
+                  <mi>b</mi>
+                  <mo>⋅<!-- ⋅ --></mo>
+                  <mrow class="MJX-TeXAtom-ORD">
+                    <mfrac>
+                      <mrow>
+                        <mrow class="MJX-TeXAtom-ORD">
+                          <mo stretchy="false">|</mo>
+                        </mrow>
+                        <mi>D</mi>
+                        <mrow class="MJX-TeXAtom-ORD">
+                          <mo stretchy="false">|</mo>
+                        </mrow>
+                      </mrow>
+                      <mtext>avgdl</mtext>
+                    </mfrac>
+                  </mrow>
+                </mrow>
+                <mo>)</mo>
+              </mrow>
+            </mrow>
+          </mfrac>
+        </mrow>
+      </mstyle>
+    </mrow>
+    <annotation encoding="application/x-tex">{\displaystyle {\text{score}}(D,Q)=\sum _{i=1}^{n}{\text{IDF}}(q_{i})\cdot {\frac {f(q_{i},D)\cdot (k_{1}+1)}{f(q_{i},D)+k_{1}\cdot \left(1-b+b\cdot {\frac {|D|}{\text{avgdl}}}\right)}}}</annotation>
+  </semantics>
+</math></span><img src="https://wikimedia.org/api/rest_v1/media/math/render/svg/8624885ce5cd14936807927801f6d29c315d3828" class="mwe-math-fallback-image-inline mw-invert skin-invert" aria-hidden="true" style="vertical-align: -4.505ex; width:61.476ex; height:8.343ex;" alt="{\displaystyle {\text{score}}(D,Q)=\sum _{i=1}^{n}{\text{IDF}}(q_{i})\cdot {\frac {f(q_{i},D)\cdot (k_{1}+1)}{f(q_{i},D)+k_{1}\cdot \left(1-b+b\cdot {\frac {|D|}{\text{avgdl}}}\right)}}}"/></span></dd></dl>
+
+<p id="mwKQ">where <span class="mwe-math-element mwe-math-element-inline" typeof="mw:Extension/math" about="#mwt14" id="mwKg" data-mw='{"name":"math","attrs":{},"body":{"extsrc":"f(q_i, D)"}}'><span class="mwe-math-mathml-inline mwe-math-mathml-a11y" style="display: none;"><math xmlns="http://www.w3.org/1998/Math/MathML" class="mathjax_ignore" alttext="{\displaystyle f(q_{i},D)}">
+  <semantics>
+    <mrow class="MJX-TeXAtom-ORD">
+      <mstyle displaystyle="true" scriptlevel="0">
+        <mi>f</mi>
+        <mo stretchy="false">(</mo>
+        <msub>
+          <mi>q</mi>
+          <mrow class="MJX-TeXAtom-ORD">
+            <mi>i</mi>
+          </mrow>
+        </msub>
+        <mo>,</mo>
+        <mi>D</mi>
+        <mo stretchy="false">)</mo>
+      </mstyle>
+    </mrow>
+    <annotation encoding="application/x-tex">{\displaystyle f(q_{i},D)}</annotation>
+  </semantics>
+</math></span><img src="https://wikimedia.org/api/rest_v1/media/math/render/svg/7caf2f93a6527d4a76c07bd67980ec921167f990" class="mwe-math-fallback-image-inline mw-invert skin-invert" aria-hidden="true" style="vertical-align: -0.838ex; width:7.883ex; height:2.843ex;" alt="{\displaystyle f(q_{i},D)}"/></span> is the number of times that the keyword <span class="mwe-math-element mwe-math-element-inline" typeof="mw:Extension/math" about="#mwt15" id="mwKw" data-mw='{"name":"math","attrs":{},"body":{"extsrc":"q_i"}}'><span class="mwe-math-mathml-inline mwe-math-mathml-a11y" style="display: none;"><math xmlns="http://www.w3.org/1998/Math/MathML" class="mathjax_ignore" alttext="{\displaystyle q_{i}}">
+  <semantics>
+    <mrow class="MJX-TeXAtom-ORD">
+      <mstyle displaystyle="true" scriptlevel="0">
+        <msub>
+          <mi>q</mi>
+          <mrow class="MJX-TeXAtom-ORD">
+            <mi>i</mi>
+          </mrow>
+        </msub>
+      </mstyle>
+    </mrow>
+    <annotation encoding="application/x-tex">{\displaystyle q_{i}}</annotation>
+  </semantics>
+</math></span><img src="https://wikimedia.org/api/rest_v1/media/math/render/svg/2752dcbff884354069fe332b8e51eb0a70a531b6" class="mwe-math-fallback-image-inline mw-invert skin-invert" aria-hidden="true" style="vertical-align: -0.671ex; width:1.837ex; height:2.009ex;" alt="{\displaystyle q_{i}}"/></span> occurs in the document <span class="texhtml mvar" style="font-style:italic;" about="#mwt10" typeof="mw:Transclusion" id="mwLA" data-mw='{"parts":[{"template":{"target":{"wt":"mvar","href":"./Template:Mvar"},"params":{"1":{"wt":"D"}},"i":0}}]}'>D</span>, <span class="mwe-math-element mwe-math-element-inline" typeof="mw:Extension/math" about="#mwt16" id="mwLQ" data-mw='{"name":"math","attrs":{},"body":{"extsrc":"|D|"}}'><span class="mwe-math-mathml-inline mwe-math-mathml-a11y" style="display: none;"><math xmlns="http://www.w3.org/1998/Math/MathML" class="mathjax_ignore" alttext="{\displaystyle |D|}">
+  <semantics>
+    <mrow class="MJX-TeXAtom-ORD">
+      <mstyle displaystyle="true" scriptlevel="0">
+        <mrow class="MJX-TeXAtom-ORD">
+          <mo stretchy="false">|</mo>
+        </mrow>
+        <mi>D</mi>
+        <mrow class="MJX-TeXAtom-ORD">
+          <mo stretchy="false">|</mo>
+        </mrow>
+      </mstyle>
+    </mrow>
+    <annotation encoding="application/x-tex">{\displaystyle |D|}</annotation>
+  </semantics>
+</math></span><img src="https://wikimedia.org/api/rest_v1/media/math/render/svg/7c936c42ab206e72c1fbc1ea103cc9eca1802af1" class="mwe-math-fallback-image-inline mw-invert skin-invert" aria-hidden="true" style="vertical-align: -0.838ex; width:3.218ex; height:2.843ex;" alt="{\displaystyle |D|}"/></span> is the length of the document <span class="texhtml mvar" style="font-style:italic;" about="#mwt11" typeof="mw:Transclusion" id="mwLg" data-mw='{"parts":[{"template":{"target":{"wt":"mvar","href":"./Template:Mvar"},"params":{"1":{"wt":"D"}},"i":0}}]}'>D</span> in words, and <span class="texhtml " about="#mwt12" typeof="mw:Transclusion" id="mwLw" data-mw='{"parts":[{"template":{"target":{"wt":"math","href":"./Template:Math"},"params":{"1":{"wt":"avgdl"}},"i":0}}]}'>avgdl</span> is the average document length in the text collection from which documents are drawn. <span class="mwe-math-element mwe-math-element-inline" typeof="mw:Extension/math" about="#mwt17" id="mwMA" data-mw='{"name":"math","attrs":{},"body":{"extsrc":"k_1"}}'><span class="mwe-math-mathml-inline mwe-math-mathml-a11y" style="display: none;"><math xmlns="http://www.w3.org/1998/Math/MathML" class="mathjax_ignore" alttext="{\displaystyle k_{1}}">
+  <semantics>
+    <mrow class="MJX-TeXAtom-ORD">
+      <mstyle displaystyle="true" scriptlevel="0">
+        <msub>
+          <mi>k</mi>
+          <mrow class="MJX-TeXAtom-ORD">
+            <mn>1</mn>
+          </mrow>
+        </msub>
+      </mstyle>
+    </mrow>
+    <annotation encoding="application/x-tex">{\displaystyle k_{1}}</annotation>
+  </semantics>
+</math></span><img src="https://wikimedia.org/api/rest_v1/media/math/render/svg/376315fd4983f01dada5ec2f7bebc48455b14a66" class="mwe-math-fallback-image-inline mw-invert skin-invert" aria-hidden="true" style="vertical-align: -0.671ex; width:2.265ex; height:2.509ex;" alt="{\displaystyle k_{1}}"/></span> and <span class="texhtml mvar" style="font-style:italic;" about="#mwt13" typeof="mw:Transclusion" id="mwMQ" data-mw='{"parts":[{"template":{"target":{"wt":"mvar","href":"./Template:Mvar"},"params":{"1":{"wt":"b"}},"i":0}}]}'>b</span> are free parameters, usually chosen, in absence of an advanced optimization, as <span class="mwe-math-element mwe-math-element-inline" typeof="mw:Extension/math" about="#mwt18" id="mwMg" data-mw='{"name":"math","attrs":{},"body":{"extsrc":"k_1 \\in [1.2,2.0]"}}'><span class="mwe-math-mathml-inline mwe-math-mathml-a11y" style="display: none;"><math xmlns="http://www.w3.org/1998/Math/MathML" class="mathjax_ignore" alttext="{\displaystyle k_{1}\in [1.2,2.0]}">
+  <semantics>
+    <mrow class="MJX-TeXAtom-ORD">
+      <mstyle displaystyle="true" scriptlevel="0">
+        <msub>
+          <mi>k</mi>
+          <mrow class="MJX-TeXAtom-ORD">
+            <mn>1</mn>
+          </mrow>
+        </msub>
+        <mo>∈<!-- ∈ --></mo>
+        <mo stretchy="false">[</mo>
+        <mn>1.2</mn>
+        <mo>,</mo>
+        <mn>2.0</mn>
+        <mo stretchy="false">]</mo>
+      </mstyle>
+    </mrow>
+    <annotation encoding="application/x-tex">{\displaystyle k_{1}\in [1.2,2.0]}</annotation>
+  </semantics>
+</math></span><img src="https://wikimedia.org/api/rest_v1/media/math/render/svg/0af33de8946a560fed04ff522251656c8207f3db" class="mwe-math-fallback-image-inline mw-invert skin-invert" aria-hidden="true" style="vertical-align: -0.838ex; width:13.377ex; height:2.843ex;" alt="{\displaystyle k_{1}\in [1.2,2.0]}"/></span> and <span class="mwe-math-element mwe-math-element-inline" typeof="mw:Extension/math" about="#mwt19" id="mwMw" data-mw='{"name":"math","attrs":{},"body":{"extsrc":"b = 0.75"}}'><span class="mwe-math-mathml-inline mwe-math-mathml-a11y" style="display: none;"><math xmlns="http://www.w3.org/1998/Math/MathML" class="mathjax_ignore" alttext="{\displaystyle b=0.75}">
+  <semantics>
+    <mrow class="MJX-TeXAtom-ORD">
+      <mstyle displaystyle="true" scriptlevel="0">
+        <mi>b</mi>
+        <mo>=</mo>
+        <mn>0.75</mn>
+      </mstyle>
+    </mrow>
+    <annotation encoding="application/x-tex">{\displaystyle b=0.75}</annotation>
+  </semantics>
+</math></span><img src="https://wikimedia.org/api/rest_v1/media/math/render/svg/cc8113cfb95fd7d2a084b62f53ff1a54186bc11c" class="mwe-math-fallback-image-inline mw-invert skin-invert" aria-hidden="true" style="vertical-align: -0.338ex; width:8.23ex; height:2.176ex;" alt="{\displaystyle b=0.75}"/></span>.<sup about="#mwt20" class="mw-ref reference" id="cite_ref-3" rel="dc:references" typeof="mw:Extension/ref" data-mw='{"name":"ref","attrs":{},"body":{"id":"mw-reference-text-cite_note-3"}}'><a href="#cite_note-3" id="mwNA"><span class="mw-reflink-text" id="mwNQ"><span class="cite-bracket" id="mwNg">[</span>3<span class="cite-bracket" id="mwNw">]</span></span></a></sup> <span class="mwe-math-element mwe-math-element-inline" typeof="mw:Extension/math" about="#mwt21" id="mwOA" data-mw='{"name":"math","attrs":{},"body":{"extsrc":"\\text{IDF}(q_i)"}}'><span class="mwe-math-mathml-inline mwe-math-mathml-a11y" style="display: none;"><math xmlns="http://www.w3.org/1998/Math/MathML" class="mathjax_ignore" alttext="{\displaystyle {\text{IDF}}(q_{i})}">
+  <semantics>
+    <mrow class="MJX-TeXAtom-ORD">
+      <mstyle displaystyle="true" scriptlevel="0">
+        <mrow class="MJX-TeXAtom-ORD">
+          <mtext>IDF</mtext>
+        </mrow>
+        <mo stretchy="false">(</mo>
+        <msub>
+          <mi>q</mi>
+          <mrow class="MJX-TeXAtom-ORD">
+            <mi>i</mi>
+          </mrow>
+        </msub>
+        <mo stretchy="false">)</mo>
+      </mstyle>
+    </mrow>
+    <annotation encoding="application/x-tex">{\displaystyle {\text{IDF}}(q_{i})}</annotation>
+  </semantics>
+</math></span><img src="https://wikimedia.org/api/rest_v1/media/math/render/svg/e34b65be68e2123b44a9106fed33a0253229e356" class="mwe-math-fallback-image-inline mw-invert skin-invert" aria-hidden="true" style="vertical-align: -0.838ex; width:7.779ex; height:2.843ex;" alt="{\displaystyle {\text{IDF}}(q_{i})}"/></span> is the IDF (<a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Inverse_document_frequency" title="Inverse document frequency" class="mw-redirect" id="mwOQ">inverse document frequency</a>) weight of the query term <span class="mwe-math-element mwe-math-element-inline" typeof="mw:Extension/math" about="#mwt22" id="mwOg" data-mw='{"name":"math","attrs":{},"body":{"extsrc":"q_i"}}'><span class="mwe-math-mathml-inline mwe-math-mathml-a11y" style="display: none;"><math xmlns="http://www.w3.org/1998/Math/MathML" class="mathjax_ignore" alttext="{\displaystyle q_{i}}">
+  <semantics>
+    <mrow class="MJX-TeXAtom-ORD">
+      <mstyle displaystyle="true" scriptlevel="0">
+        <msub>
+          <mi>q</mi>
+          <mrow class="MJX-TeXAtom-ORD">
+            <mi>i</mi>
+          </mrow>
+        </msub>
+      </mstyle>
+    </mrow>
+    <annotation encoding="application/x-tex">{\displaystyle q_{i}}</annotation>
+  </semantics>
+</math></span><img src="https://wikimedia.org/api/rest_v1/media/math/render/svg/2752dcbff884354069fe332b8e51eb0a70a531b6" class="mwe-math-fallback-image-inline mw-invert skin-invert" aria-hidden="true" style="vertical-align: -0.671ex; width:1.837ex; height:2.009ex;" alt="{\displaystyle q_{i}}"/></span>. It is usually computed as:</p>
+
+<dl id="mwOw"><dd id="mwPA"><span class="mwe-math-element mwe-math-element-inline" typeof="mw:Extension/math" about="#mwt23" id="mwPQ" data-mw='{"name":"math","attrs":{},"body":{"extsrc":"\\text{IDF}(q_i) = \\ln \\left(\\frac{N - n(q_i) + 0.5}{n(q_i) + 0.5}+1\\right)"}}'><span class="mwe-math-mathml-inline mwe-math-mathml-a11y" style="display: none;"><math xmlns="http://www.w3.org/1998/Math/MathML" class="mathjax_ignore" alttext="{\displaystyle {\text{IDF}}(q_{i})=\ln \left({\frac {N-n(q_{i})+0.5}{n(q_{i})+0.5}}+1\right)}">
+  <semantics>
+    <mrow class="MJX-TeXAtom-ORD">
+      <mstyle displaystyle="true" scriptlevel="0">
+        <mrow class="MJX-TeXAtom-ORD">
+          <mtext>IDF</mtext>
+        </mrow>
+        <mo stretchy="false">(</mo>
+        <msub>
+          <mi>q</mi>
+          <mrow class="MJX-TeXAtom-ORD">
+            <mi>i</mi>
+          </mrow>
+        </msub>
+        <mo stretchy="false">)</mo>
+        <mo>=</mo>
+        <mi>ln</mi>
+        <mo>⁡<!-- ⁡ --></mo>
+        <mrow>
+          <mo>(</mo>
+          <mrow>
+            <mrow class="MJX-TeXAtom-ORD">
+              <mfrac>
+                <mrow>
+                  <mi>N</mi>
+                  <mo>−<!-- − --></mo>
+                  <mi>n</mi>
+                  <mo stretchy="false">(</mo>
+                  <msub>
+                    <mi>q</mi>
+                    <mrow class="MJX-TeXAtom-ORD">
+                      <mi>i</mi>
+                    </mrow>
+                  </msub>
+                  <mo stretchy="false">)</mo>
+                  <mo>+</mo>
+                  <mn>0.5</mn>
+                </mrow>
+                <mrow>
+                  <mi>n</mi>
+                  <mo stretchy="false">(</mo>
+                  <msub>
+                    <mi>q</mi>
+                    <mrow class="MJX-TeXAtom-ORD">
+                      <mi>i</mi>
+                    </mrow>
+                  </msub>
+                  <mo stretchy="false">)</mo>
+                  <mo>+</mo>
+                  <mn>0.5</mn>
+                </mrow>
+              </mfrac>
+            </mrow>
+            <mo>+</mo>
+            <mn>1</mn>
+          </mrow>
+          <mo>)</mo>
+        </mrow>
+      </mstyle>
+    </mrow>
+    <annotation encoding="application/x-tex">{\displaystyle {\text{IDF}}(q_{i})=\ln \left({\frac {N-n(q_{i})+0.5}{n(q_{i})+0.5}}+1\right)}</annotation>
+  </semantics>
+</math></span><img src="https://wikimedia.org/api/rest_v1/media/math/render/svg/23dda1c06c7bad8d76c69c2086cf8937b6997a03" class="mwe-math-fallback-image-inline mw-invert skin-invert" aria-hidden="true" style="vertical-align: -2.671ex; width:36.834ex; height:6.509ex;" alt="{\displaystyle {\text{IDF}}(q_{i})=\ln \left({\frac {N-n(q_{i})+0.5}{n(q_{i})+0.5}}+1\right)}"/></span></dd></dl>
+
+<p id="mwPg">where  <span class="texhtml mvar" style="font-style:italic;" about="#mwt24" typeof="mw:Transclusion" id="mwPw" data-mw='{"parts":[{"template":{"target":{"wt":"mvar","href":"./Template:Mvar"},"params":{"1":{"wt":"N"}},"i":0}}]}'>N</span> is the total number of documents in the collection, and <span class="mwe-math-element mwe-math-element-inline" typeof="mw:Extension/math" about="#mwt25" id="mwQA" data-mw='{"name":"math","attrs":{},"body":{"extsrc":"n(q_i)"}}'><span class="mwe-math-mathml-inline mwe-math-mathml-a11y" style="display: none;"><math xmlns="http://www.w3.org/1998/Math/MathML" class="mathjax_ignore" alttext="{\displaystyle n(q_{i})}">
+  <semantics>
+    <mrow class="MJX-TeXAtom-ORD">
+      <mstyle displaystyle="true" scriptlevel="0">
+        <mi>n</mi>
+        <mo stretchy="false">(</mo>
+        <msub>
+          <mi>q</mi>
+          <mrow class="MJX-TeXAtom-ORD">
+            <mi>i</mi>
+          </mrow>
+        </msub>
+        <mo stretchy="false">)</mo>
+      </mstyle>
+    </mrow>
+    <annotation encoding="application/x-tex">{\displaystyle n(q_{i})}</annotation>
+  </semantics>
+</math></span><img src="https://wikimedia.org/api/rest_v1/media/math/render/svg/14dc99fdb5fe2428a1c46cd20a7255dbee944945" class="mwe-math-fallback-image-inline mw-invert skin-invert" aria-hidden="true" style="vertical-align: -0.838ex; width:5.041ex; height:2.843ex;" alt="{\displaystyle n(q_{i})}"/></span> is the number of documents containing <span class="mwe-math-element mwe-math-element-inline" typeof="mw:Extension/math" about="#mwt26" id="mwQQ" data-mw='{"name":"math","attrs":{},"body":{"extsrc":"q_i"}}'><span class="mwe-math-mathml-inline mwe-math-mathml-a11y" style="display: none;"><math xmlns="http://www.w3.org/1998/Math/MathML" class="mathjax_ignore" alttext="{\displaystyle q_{i}}">
+  <semantics>
+    <mrow class="MJX-TeXAtom-ORD">
+      <mstyle displaystyle="true" scriptlevel="0">
+        <msub>
+          <mi>q</mi>
+          <mrow class="MJX-TeXAtom-ORD">
+            <mi>i</mi>
+          </mrow>
+        </msub>
+      </mstyle>
+    </mrow>
+    <annotation encoding="application/x-tex">{\displaystyle q_{i}}</annotation>
+  </semantics>
+</math></span><img src="https://wikimedia.org/api/rest_v1/media/math/render/svg/2752dcbff884354069fe332b8e51eb0a70a531b6" class="mwe-math-fallback-image-inline mw-invert skin-invert" aria-hidden="true" style="vertical-align: -0.671ex; width:1.837ex; height:2.009ex;" alt="{\displaystyle q_{i}}"/></span>.</p>
+
+<p id="mwQg">There are several interpretations for IDF and slight variations on its formula. In the original BM25 derivation, the IDF component is derived from the <a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Binary_Independence_Model" title="Binary Independence Model" class="mw-redirect" id="mwQw">Binary Independence Model</a>.</p>
+
+</section><section data-mw-section-id="2" id="mwRA" aria-labelledby="IDF_information_theoretic_interpretation"><div class="mw-heading mw-heading2"><h2 id="IDF_information_theoretic_interpretation">IDF information theoretic interpretation</h2><span class="mw-editsection"><span class="mw-editsection-bracket">[</span><a href="/w/index.php?title=Okapi_BM25&amp;action=edit&amp;section=2" title="Edit section: IDF information theoretic interpretation"><span>edit</span></a><span class="mw-editsection-bracket">]</span></span></div>
+<p id="mwRQ">Here is an interpretation from <a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Information_theory" title="Information theory" id="mwRg">information theory</a>. Suppose a query term <span class="mwe-math-element mwe-math-element-inline" typeof="mw:Extension/math" about="#mwt27" id="mwRw" data-mw='{"name":"math","attrs":{},"body":{"extsrc":"q"}}'><span class="mwe-math-mathml-inline mwe-math-mathml-a11y" style="display: none;"><math xmlns="http://www.w3.org/1998/Math/MathML" class="mathjax_ignore" alttext="{\displaystyle q}">
+  <semantics>
+    <mrow class="MJX-TeXAtom-ORD">
+      <mstyle displaystyle="true" scriptlevel="0">
+        <mi>q</mi>
+      </mstyle>
+    </mrow>
+    <annotation encoding="application/x-tex">{\displaystyle q}</annotation>
+  </semantics>
+</math></span><img src="https://wikimedia.org/api/rest_v1/media/math/render/svg/06809d64fa7c817ffc7e323f85997f783dbdf71d" class="mwe-math-fallback-image-inline mw-invert skin-invert" aria-hidden="true" style="vertical-align: -0.671ex; width:1.07ex; height:2.009ex;" alt="{\displaystyle q}"/></span> appears in <span class="mwe-math-element mwe-math-element-inline" typeof="mw:Extension/math" about="#mwt28" id="mwSA" data-mw='{"name":"math","attrs":{},"body":{"extsrc":"n(q)"}}'><span class="mwe-math-mathml-inline mwe-math-mathml-a11y" style="display: none;"><math xmlns="http://www.w3.org/1998/Math/MathML" class="mathjax_ignore" alttext="{\displaystyle n(q)}">
+  <semantics>
+    <mrow class="MJX-TeXAtom-ORD">
+      <mstyle displaystyle="true" scriptlevel="0">
+        <mi>n</mi>
+        <mo stretchy="false">(</mo>
+        <mi>q</mi>
+        <mo stretchy="false">)</mo>
+      </mstyle>
+    </mrow>
+    <annotation encoding="application/x-tex">{\displaystyle n(q)}</annotation>
+  </semantics>
+</math></span><img src="https://wikimedia.org/api/rest_v1/media/math/render/svg/bbd26739abf7d0b2055386c8a43df80e398167be" class="mwe-math-fallback-image-inline mw-invert skin-invert" aria-hidden="true" style="vertical-align: -0.838ex; width:4.274ex; height:2.843ex;" alt="{\displaystyle n(q)}"/></span> documents. Then a randomly picked document <span class="mwe-math-element mwe-math-element-inline" typeof="mw:Extension/math" about="#mwt29" id="mwSQ" data-mw='{"name":"math","attrs":{},"body":{"extsrc":"D"}}'><span class="mwe-math-mathml-inline mwe-math-mathml-a11y" style="display: none;"><math xmlns="http://www.w3.org/1998/Math/MathML" class="mathjax_ignore" alttext="{\displaystyle D}">
+  <semantics>
+    <mrow class="MJX-TeXAtom-ORD">
+      <mstyle displaystyle="true" scriptlevel="0">
+        <mi>D</mi>
+      </mstyle>
+    </mrow>
+    <annotation encoding="application/x-tex">{\displaystyle D}</annotation>
+  </semantics>
+</math></span><img src="https://wikimedia.org/api/rest_v1/media/math/render/svg/f34a0c600395e5d4345287e21fb26efd386990e6" class="mwe-math-fallback-image-inline mw-invert skin-invert" aria-hidden="true" style="vertical-align: -0.338ex; width:1.924ex; height:2.176ex;" alt="{\displaystyle D}"/></span> will contain the term with probability <span class="mwe-math-element mwe-math-element-inline" typeof="mw:Extension/math" about="#mwt30" id="mwSg" data-mw='{"name":"math","attrs":{},"body":{"extsrc":"\\frac{n(q)}{N}"}}'><span class="mwe-math-mathml-inline mwe-math-mathml-a11y" style="display: none;"><math xmlns="http://www.w3.org/1998/Math/MathML" class="mathjax_ignore" alttext="{\displaystyle {\frac {n(q)}{N}}}">
+  <semantics>
+    <mrow class="MJX-TeXAtom-ORD">
+      <mstyle displaystyle="true" scriptlevel="0">
+        <mrow class="MJX-TeXAtom-ORD">
+          <mfrac>
+            <mrow>
+              <mi>n</mi>
+              <mo stretchy="false">(</mo>
+              <mi>q</mi>
+              <mo stretchy="false">)</mo>
+            </mrow>
+            <mi>N</mi>
+          </mfrac>
+        </mrow>
+      </mstyle>
+    </mrow>
+    <annotation encoding="application/x-tex">{\displaystyle {\frac {n(q)}{N}}}</annotation>
+  </semantics>
+</math></span><img src="https://wikimedia.org/api/rest_v1/media/math/render/svg/42db8d96fb7df8e92eb349eb1df81ddb61af8fb1" class="mwe-math-fallback-image-inline mw-invert skin-invert" aria-hidden="true" style="vertical-align: -1.838ex; width:5.11ex; height:5.676ex;" alt="{\displaystyle {\frac {n(q)}{N}}}"/></span> (where <span class="mwe-math-element mwe-math-element-inline" typeof="mw:Extension/math" about="#mwt31" id="mwSw" data-mw='{"name":"math","attrs":{},"body":{"extsrc":"N"}}'><span class="mwe-math-mathml-inline mwe-math-mathml-a11y" style="display: none;"><math xmlns="http://www.w3.org/1998/Math/MathML" class="mathjax_ignore" alttext="{\displaystyle N}">
+  <semantics>
+    <mrow class="MJX-TeXAtom-ORD">
+      <mstyle displaystyle="true" scriptlevel="0">
+        <mi>N</mi>
+      </mstyle>
+    </mrow>
+    <annotation encoding="application/x-tex">{\displaystyle N}</annotation>
+  </semantics>
+</math></span><img src="https://wikimedia.org/api/rest_v1/media/math/render/svg/f5e3890c981ae85503089652feb48b191b57aae3" class="mwe-math-fallback-image-inline mw-invert skin-invert" aria-hidden="true" style="vertical-align: -0.338ex; width:2.064ex; height:2.176ex;" alt="{\displaystyle N}"/></span> is again the cardinality of the set of documents in the collection). Therefore, the <a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Information_content" title="Information content" id="mwTA">information content</a> of the message "<span class="mwe-math-element mwe-math-element-inline" typeof="mw:Extension/math" about="#mwt32" id="mwTQ" data-mw='{"name":"math","attrs":{},"body":{"extsrc":"D"}}'><span class="mwe-math-mathml-inline mwe-math-mathml-a11y" style="display: none;"><math xmlns="http://www.w3.org/1998/Math/MathML" class="mathjax_ignore" alttext="{\displaystyle D}">
+  <semantics>
+    <mrow class="MJX-TeXAtom-ORD">
+      <mstyle displaystyle="true" scriptlevel="0">
+        <mi>D</mi>
+      </mstyle>
+    </mrow>
+    <annotation encoding="application/x-tex">{\displaystyle D}</annotation>
+  </semantics>
+</math></span><img src="https://wikimedia.org/api/rest_v1/media/math/render/svg/f34a0c600395e5d4345287e21fb26efd386990e6" class="mwe-math-fallback-image-inline mw-invert skin-invert" aria-hidden="true" style="vertical-align: -0.338ex; width:1.924ex; height:2.176ex;" alt="{\displaystyle D}"/></span> contains <span class="mwe-math-element mwe-math-element-inline" typeof="mw:Extension/math" about="#mwt33" id="mwTg" data-mw='{"name":"math","attrs":{},"body":{"extsrc":"q"}}'><span class="mwe-math-mathml-inline mwe-math-mathml-a11y" style="display: none;"><math xmlns="http://www.w3.org/1998/Math/MathML" class="mathjax_ignore" alttext="{\displaystyle q}">
+  <semantics>
+    <mrow class="MJX-TeXAtom-ORD">
+      <mstyle displaystyle="true" scriptlevel="0">
+        <mi>q</mi>
+      </mstyle>
+    </mrow>
+    <annotation encoding="application/x-tex">{\displaystyle q}</annotation>
+  </semantics>
+</math></span><img src="https://wikimedia.org/api/rest_v1/media/math/render/svg/06809d64fa7c817ffc7e323f85997f783dbdf71d" class="mwe-math-fallback-image-inline mw-invert skin-invert" aria-hidden="true" style="vertical-align: -0.671ex; width:1.07ex; height:2.009ex;" alt="{\displaystyle q}"/></span>" is:</p>
+
+<dl id="mwTw"><dd id="mwUA"><span class="mwe-math-element mwe-math-element-inline" typeof="mw:Extension/math" about="#mwt34" id="mwUQ" data-mw='{"name":"math","attrs":{},"body":{"extsrc":"-\\log \\frac{n(q)}{N} = \\log \\frac{N}{n(q)}."}}'><span class="mwe-math-mathml-inline mwe-math-mathml-a11y" style="display: none;"><math xmlns="http://www.w3.org/1998/Math/MathML" class="mathjax_ignore" alttext="{\displaystyle -\log {\frac {n(q)}{N}}=\log {\frac {N}{n(q)}}.}">
+  <semantics>
+    <mrow class="MJX-TeXAtom-ORD">
+      <mstyle displaystyle="true" scriptlevel="0">
+        <mo>−<!-- − --></mo>
+        <mi>log</mi>
+        <mo>⁡<!-- ⁡ --></mo>
+        <mrow class="MJX-TeXAtom-ORD">
+          <mfrac>
+            <mrow>
+              <mi>n</mi>
+              <mo stretchy="false">(</mo>
+              <mi>q</mi>
+              <mo stretchy="false">)</mo>
+            </mrow>
+            <mi>N</mi>
+          </mfrac>
+        </mrow>
+        <mo>=</mo>
+        <mi>log</mi>
+        <mo>⁡<!-- ⁡ --></mo>
+        <mrow class="MJX-TeXAtom-ORD">
+          <mfrac>
+            <mi>N</mi>
+            <mrow>
+              <mi>n</mi>
+              <mo stretchy="false">(</mo>
+              <mi>q</mi>
+              <mo stretchy="false">)</mo>
+            </mrow>
+          </mfrac>
+        </mrow>
+        <mo>.</mo>
+      </mstyle>
+    </mrow>
+    <annotation encoding="application/x-tex">{\displaystyle -\log {\frac {n(q)}{N}}=\log {\frac {N}{n(q)}}.}</annotation>
+  </semantics>
+</math></span><img src="https://wikimedia.org/api/rest_v1/media/math/render/svg/92f7f5b617de20520d44e03ec5e04faf31490920" class="mwe-math-fallback-image-inline mw-invert skin-invert" aria-hidden="true" style="vertical-align: -2.671ex; width:22.878ex; height:6.509ex;" alt="{\displaystyle -\log {\frac {n(q)}{N}}=\log {\frac {N}{n(q)}}.}"/></span></dd></dl>
+
+<p id="mwUg">Now suppose we have two query terms <span class="mwe-math-element mwe-math-element-inline" typeof="mw:Extension/math" about="#mwt35" id="mwUw" data-mw='{"name":"math","attrs":{},"body":{"extsrc":"q_1"}}'><span class="mwe-math-mathml-inline mwe-math-mathml-a11y" style="display: none;"><math xmlns="http://www.w3.org/1998/Math/MathML" class="mathjax_ignore" alttext="{\displaystyle q_{1}}">
+  <semantics>
+    <mrow class="MJX-TeXAtom-ORD">
+      <mstyle displaystyle="true" scriptlevel="0">
+        <msub>
+          <mi>q</mi>
+          <mrow class="MJX-TeXAtom-ORD">
+            <mn>1</mn>
+          </mrow>
+        </msub>
+      </mstyle>
+    </mrow>
+    <annotation encoding="application/x-tex">{\displaystyle q_{1}}</annotation>
+  </semantics>
+</math></span><img src="https://wikimedia.org/api/rest_v1/media/math/render/svg/9daa41f6e8f78ea6bb5711d7ac97901ce564b94e" class="mwe-math-fallback-image-inline mw-invert skin-invert" aria-hidden="true" style="vertical-align: -0.671ex; width:2.091ex; height:2.009ex;" alt="{\displaystyle q_{1}}"/></span> and <span class="mwe-math-element mwe-math-element-inline" typeof="mw:Extension/math" about="#mwt36" id="mwVA" data-mw='{"name":"math","attrs":{},"body":{"extsrc":"q_2"}}'><span class="mwe-math-mathml-inline mwe-math-mathml-a11y" style="display: none;"><math xmlns="http://www.w3.org/1998/Math/MathML" class="mathjax_ignore" alttext="{\displaystyle q_{2}}">
+  <semantics>
+    <mrow class="MJX-TeXAtom-ORD">
+      <mstyle displaystyle="true" scriptlevel="0">
+        <msub>
+          <mi>q</mi>
+          <mrow class="MJX-TeXAtom-ORD">
+            <mn>2</mn>
+          </mrow>
+        </msub>
+      </mstyle>
+    </mrow>
+    <annotation encoding="application/x-tex">{\displaystyle q_{2}}</annotation>
+  </semantics>
+</math></span><img src="https://wikimedia.org/api/rest_v1/media/math/render/svg/fd2d05084feb02b8ba29b0673440fb673b102589" class="mwe-math-fallback-image-inline mw-invert skin-invert" aria-hidden="true" style="vertical-align: -0.671ex; width:2.091ex; height:2.009ex;" alt="{\displaystyle q_{2}}"/></span>. If the two terms occur in documents entirely independently of each other, then the probability of seeing both <span class="mwe-math-element mwe-math-element-inline" typeof="mw:Extension/math" about="#mwt37" id="mwVQ" data-mw='{"name":"math","attrs":{},"body":{"extsrc":"q_1"}}'><span class="mwe-math-mathml-inline mwe-math-mathml-a11y" style="display: none;"><math xmlns="http://www.w3.org/1998/Math/MathML" class="mathjax_ignore" alttext="{\displaystyle q_{1}}">
+  <semantics>
+    <mrow class="MJX-TeXAtom-ORD">
+      <mstyle displaystyle="true" scriptlevel="0">
+        <msub>
+          <mi>q</mi>
+          <mrow class="MJX-TeXAtom-ORD">
+            <mn>1</mn>
+          </mrow>
+        </msub>
+      </mstyle>
+    </mrow>
+    <annotation encoding="application/x-tex">{\displaystyle q_{1}}</annotation>
+  </semantics>
+</math></span><img src="https://wikimedia.org/api/rest_v1/media/math/render/svg/9daa41f6e8f78ea6bb5711d7ac97901ce564b94e" class="mwe-math-fallback-image-inline mw-invert skin-invert" aria-hidden="true" style="vertical-align: -0.671ex; width:2.091ex; height:2.009ex;" alt="{\displaystyle q_{1}}"/></span> and <span class="mwe-math-element mwe-math-element-inline" typeof="mw:Extension/math" about="#mwt38" id="mwVg" data-mw='{"name":"math","attrs":{},"body":{"extsrc":"q_2"}}'><span class="mwe-math-mathml-inline mwe-math-mathml-a11y" style="display: none;"><math xmlns="http://www.w3.org/1998/Math/MathML" class="mathjax_ignore" alttext="{\displaystyle q_{2}}">
+  <semantics>
+    <mrow class="MJX-TeXAtom-ORD">
+      <mstyle displaystyle="true" scriptlevel="0">
+        <msub>
+          <mi>q</mi>
+          <mrow class="MJX-TeXAtom-ORD">
+            <mn>2</mn>
+          </mrow>
+        </msub>
+      </mstyle>
+    </mrow>
+    <annotation encoding="application/x-tex">{\displaystyle q_{2}}</annotation>
+  </semantics>
+</math></span><img src="https://wikimedia.org/api/rest_v1/media/math/render/svg/fd2d05084feb02b8ba29b0673440fb673b102589" class="mwe-math-fallback-image-inline mw-invert skin-invert" aria-hidden="true" style="vertical-align: -0.671ex; width:2.091ex; height:2.009ex;" alt="{\displaystyle q_{2}}"/></span> in a randomly picked document <span class="mwe-math-element mwe-math-element-inline" typeof="mw:Extension/math" about="#mwt39" id="mwVw" data-mw='{"name":"math","attrs":{},"body":{"extsrc":"D"}}'><span class="mwe-math-mathml-inline mwe-math-mathml-a11y" style="display: none;"><math xmlns="http://www.w3.org/1998/Math/MathML" class="mathjax_ignore" alttext="{\displaystyle D}">
+  <semantics>
+    <mrow class="MJX-TeXAtom-ORD">
+      <mstyle displaystyle="true" scriptlevel="0">
+        <mi>D</mi>
+      </mstyle>
+    </mrow>
+    <annotation encoding="application/x-tex">{\displaystyle D}</annotation>
+  </semantics>
+</math></span><img src="https://wikimedia.org/api/rest_v1/media/math/render/svg/f34a0c600395e5d4345287e21fb26efd386990e6" class="mwe-math-fallback-image-inline mw-invert skin-invert" aria-hidden="true" style="vertical-align: -0.338ex; width:1.924ex; height:2.176ex;" alt="{\displaystyle D}"/></span> is:</p>
+
+<dl id="mwWA"><dd id="mwWQ"><span class="mwe-math-element mwe-math-element-inline" typeof="mw:Extension/math" about="#mwt40" id="mwWg" data-mw='{"name":"math","attrs":{},"body":{"extsrc":"\\frac{n(q_1)}{N} \\cdot \\frac{n(q_2)}{N},"}}'><span class="mwe-math-mathml-inline mwe-math-mathml-a11y" style="display: none;"><math xmlns="http://www.w3.org/1998/Math/MathML" class="mathjax_ignore" alttext="{\displaystyle {\frac {n(q_{1})}{N}}\cdot {\frac {n(q_{2})}{N}},}">
+  <semantics>
+    <mrow class="MJX-TeXAtom-ORD">
+      <mstyle displaystyle="true" scriptlevel="0">
+        <mrow class="MJX-TeXAtom-ORD">
+          <mfrac>
+            <mrow>
+              <mi>n</mi>
+              <mo stretchy="false">(</mo>
+              <msub>
+                <mi>q</mi>
+                <mrow class="MJX-TeXAtom-ORD">
+                  <mn>1</mn>
+                </mrow>
+              </msub>
+              <mo stretchy="false">)</mo>
+            </mrow>
+            <mi>N</mi>
+          </mfrac>
+        </mrow>
+        <mo>⋅<!-- ⋅ --></mo>
+        <mrow class="MJX-TeXAtom-ORD">
+          <mfrac>
+            <mrow>
+              <mi>n</mi>
+              <mo stretchy="false">(</mo>
+              <msub>
+                <mi>q</mi>
+                <mrow class="MJX-TeXAtom-ORD">
+                  <mn>2</mn>
+                </mrow>
+              </msub>
+              <mo stretchy="false">)</mo>
+            </mrow>
+            <mi>N</mi>
+          </mfrac>
+        </mrow>
+        <mo>,</mo>
+      </mstyle>
+    </mrow>
+    <annotation encoding="application/x-tex">{\displaystyle {\frac {n(q_{1})}{N}}\cdot {\frac {n(q_{2})}{N}},}</annotation>
+  </semantics>
+</math></span><img src="https://wikimedia.org/api/rest_v1/media/math/render/svg/b38127d11e84a12ac36a3dc34890af7294e2a03c" class="mwe-math-fallback-image-inline mw-invert skin-invert" aria-hidden="true" style="vertical-align: -1.838ex; width:14.589ex; height:5.676ex;" alt="{\displaystyle {\frac {n(q_{1})}{N}}\cdot {\frac {n(q_{2})}{N}},}"/></span></dd></dl>
+
+<p id="mwWw">and the information content of such an event is:</p>
+
+<dl id="mwXA"><dd id="mwXQ"><span class="mwe-math-element mwe-math-element-inline" typeof="mw:Extension/math" about="#mwt41" id="mwXg" data-mw='{"name":"math","attrs":{},"body":{"extsrc":"\\sum_{i=1}^{2} \\log \\frac{N}{n(q_i)}."}}'><span class="mwe-math-mathml-inline mwe-math-mathml-a11y" style="display: none;"><math xmlns="http://www.w3.org/1998/Math/MathML" class="mathjax_ignore" alttext="{\displaystyle \sum _{i=1}^{2}\log {\frac {N}{n(q_{i})}}.}">
+  <semantics>
+    <mrow class="MJX-TeXAtom-ORD">
+      <mstyle displaystyle="true" scriptlevel="0">
+        <munderover>
+          <mo>∑<!-- ∑ --></mo>
+          <mrow class="MJX-TeXAtom-ORD">
+            <mi>i</mi>
+            <mo>=</mo>
+            <mn>1</mn>
+          </mrow>
+          <mrow class="MJX-TeXAtom-ORD">
+            <mn>2</mn>
+          </mrow>
+        </munderover>
+        <mi>log</mi>
+        <mo>⁡<!-- ⁡ --></mo>
+        <mrow class="MJX-TeXAtom-ORD">
+          <mfrac>
+            <mi>N</mi>
+            <mrow>
+              <mi>n</mi>
+              <mo stretchy="false">(</mo>
+              <msub>
+                <mi>q</mi>
+                <mrow class="MJX-TeXAtom-ORD">
+                  <mi>i</mi>
+                </mrow>
+              </msub>
+              <mo stretchy="false">)</mo>
+            </mrow>
+          </mfrac>
+        </mrow>
+        <mo>.</mo>
+      </mstyle>
+    </mrow>
+    <annotation encoding="application/x-tex">{\displaystyle \sum _{i=1}^{2}\log {\frac {N}{n(q_{i})}}.}</annotation>
+  </semantics>
+</math></span><img src="https://wikimedia.org/api/rest_v1/media/math/render/svg/4d9d8aef452ae91622ed5d5d2df133650cbdf050" class="mwe-math-fallback-image-inline mw-invert skin-invert" aria-hidden="true" style="vertical-align: -3.005ex; width:13.625ex; height:7.343ex;" alt="{\displaystyle \sum _{i=1}^{2}\log {\frac {N}{n(q_{i})}}.}"/></span></dd></dl>
+
+<p id="mwXw">With a small variation, this is exactly what is expressed by the IDF component of BM25.</p>
+
+</section><section data-mw-section-id="3" id="mwYA" aria-labelledby="Modifications"><div class="mw-heading mw-heading2"><h2 id="Modifications">Modifications</h2><span class="mw-editsection"><span class="mw-editsection-bracket">[</span><a href="/w/index.php?title=Okapi_BM25&amp;action=edit&amp;section=3" title="Edit section: Modifications"><span>edit</span></a><span class="mw-editsection-bracket">]</span></span></div>
+<ul id="mwYQ"><li id="mwYg">At the extreme values of the coefficient <span class="texhtml mvar" style="font-style:italic;" about="#mwt42" typeof="mw:Transclusion" id="mwYw" data-mw='{"parts":[{"template":{"target":{"wt":"mvar","href":"./Template:Mvar"},"params":{"1":{"wt":"b"}},"i":0}}]}'>b</span> BM25 turns into ranking functions known as <b id="mwZA">BM11</b> (for <span class="mwe-math-element mwe-math-element-inline" typeof="mw:Extension/math" about="#mwt43" id="mwZQ" data-mw='{"name":"math","attrs":{},"body":{"extsrc":"b=1"}}'><span class="mwe-math-mathml-inline mwe-math-mathml-a11y" style="display: none;"><math xmlns="http://www.w3.org/1998/Math/MathML" class="mathjax_ignore" alttext="{\displaystyle b=1}">
+  <semantics>
+    <mrow class="MJX-TeXAtom-ORD">
+      <mstyle displaystyle="true" scriptlevel="0">
+        <mi>b</mi>
+        <mo>=</mo>
+        <mn>1</mn>
+      </mstyle>
+    </mrow>
+    <annotation encoding="application/x-tex">{\displaystyle b=1}</annotation>
+  </semantics>
+</math></span><img src="https://wikimedia.org/api/rest_v1/media/math/render/svg/3f55bc77dec8088791b5c1ed51e634cc1b431fd0" class="mwe-math-fallback-image-inline mw-invert skin-invert" aria-hidden="true" style="vertical-align: -0.338ex; width:5.258ex; height:2.176ex;" alt="{\displaystyle b=1}"/></span>) and <b id="mwZg">BM15</b> (for <span class="mwe-math-element mwe-math-element-inline" typeof="mw:Extension/math" about="#mwt44" id="mwZw" data-mw='{"name":"math","attrs":{},"body":{"extsrc":"b=0"}}'><span class="mwe-math-mathml-inline mwe-math-mathml-a11y" style="display: none;"><math xmlns="http://www.w3.org/1998/Math/MathML" class="mathjax_ignore" alttext="{\displaystyle b=0}">
+  <semantics>
+    <mrow class="MJX-TeXAtom-ORD">
+      <mstyle displaystyle="true" scriptlevel="0">
+        <mi>b</mi>
+        <mo>=</mo>
+        <mn>0</mn>
+      </mstyle>
+    </mrow>
+    <annotation encoding="application/x-tex">{\displaystyle b=0}</annotation>
+  </semantics>
+</math></span><img src="https://wikimedia.org/api/rest_v1/media/math/render/svg/19206e7d4dab695ccb34c502eff0741e98dbdfc2" class="mwe-math-fallback-image-inline mw-invert skin-invert" aria-hidden="true" style="vertical-align: -0.338ex; width:5.258ex; height:2.176ex;" alt="{\displaystyle b=0}"/></span>).<sup about="#mwt47" class="mw-ref reference" id="cite_ref-4" rel="dc:references" typeof="mw:Extension/ref" data-mw='{"name":"ref","attrs":{},"body":{"id":"mw-reference-text-cite_note-4"}}'><a href="#cite_note-4" id="mwaA"><span class="mw-reflink-text" id="mwaQ"><span class="cite-bracket" id="mwag">[</span>4<span class="cite-bracket" id="mwaw">]</span></span></a></sup></li>
+<li id="mwbA"><b id="mwbQ">BM25F</b><sup about="#mwt48" class="mw-ref reference" id="cite_ref-5" rel="dc:references" typeof="mw:Extension/ref" data-mw='{"name":"ref","attrs":{},"body":{"id":"mw-reference-text-cite_note-5"}}'><a href="#cite_note-5" id="mwbg"><span class="mw-reflink-text" id="mwbw"><span class="cite-bracket" id="mwcA">[</span>5<span class="cite-bracket" id="mwcQ">]</span></span></a></sup><sup about="#mwt51" class="mw-ref reference" id="cite_ref-robertson2009_2-1" rel="dc:references" typeof="mw:Extension/ref" data-mw='{"name":"ref","attrs":{"name":"robertson2009"},"body":{"id":"mw-reference-text-cite_note-robertson2009-2"}}'><a href="#cite_note-robertson2009-2" id="mwcg"><span class="mw-reflink-text" id="mwcw"><span class="cite-bracket" id="mwdA">[</span>2<span class="cite-bracket" id="mwdQ">]</span></span></a></sup> (or the <b id="mwdg">BM25 model with Extension to Multiple Weighted Fields</b><sup about="#mwt54" class="mw-ref reference" id="cite_ref-6" rel="dc:references" typeof="mw:Extension/ref" data-mw='{"name":"ref","attrs":{},"body":{"id":"mw-reference-text-cite_note-6"}}'><a href="#cite_note-6" id="mwdw"><span class="mw-reflink-text" id="mweA"><span class="cite-bracket" id="mweQ">[</span>6<span class="cite-bracket" id="mweg">]</span></span></a></sup>) is a modification of BM25 in which the document is considered to be composed from several fields (such as headlines, main text, anchor text) with possibly different degrees of importance, term relevance saturation and length normalization. BM25F defines each type of field as a <i id="mwew">stream</i>, applying a per-stream weighting to scale each stream against the calculated score.</li></ul>
+
+<ul id="mwfA"><li id="mwfQ"><b id="mwfg">BM25+</b><sup about="#mwt56" class="mw-ref reference" id="cite_ref-7" rel="dc:references" typeof="mw:Extension/ref" data-mw='{"name":"ref","attrs":{},"body":{"id":"mw-reference-text-cite_note-7"}}'><a href="#cite_note-7" id="mwfw"><span class="mw-reflink-text" id="mwgA"><span class="cite-bracket" id="mwgQ">[</span>7<span class="cite-bracket" id="mwgg">]</span></span></a></sup> is an extension of BM25. BM25+ was developed to address one deficiency of the standard BM25 in which the component of term frequency normalization by document length is not properly lower-bounded; as a result of this deficiency, long documents which do match the query term can often be scored unfairly by BM25 as having a similar relevancy to shorter documents that do not contain the query term at all. The scoring formula of BM25+ only has one additional free parameter <span class="mwe-math-element mwe-math-element-inline" typeof="mw:Extension/math" about="#mwt57" id="mwgw" data-mw='{"name":"math","attrs":{},"body":{"extsrc":"\\delta"}}'><span class="mwe-math-mathml-inline mwe-math-mathml-a11y" style="display: none;"><math xmlns="http://www.w3.org/1998/Math/MathML" class="mathjax_ignore" alttext="{\displaystyle \delta }">
+  <semantics>
+    <mrow class="MJX-TeXAtom-ORD">
+      <mstyle displaystyle="true" scriptlevel="0">
+        <mi>δ<!-- δ --></mi>
+      </mstyle>
+    </mrow>
+    <annotation encoding="application/x-tex">{\displaystyle \delta }</annotation>
+  </semantics>
+</math></span><img src="https://wikimedia.org/api/rest_v1/media/math/render/svg/c5321cfa797202b3e1f8620663ff43c4660ea03a" class="mwe-math-fallback-image-inline mw-invert skin-invert" aria-hidden="true" style="vertical-align: -0.338ex; width:1.049ex; height:2.343ex;" alt="{\displaystyle \delta }"/></span> (the default value is <span class="texhtml " about="#mwt55" typeof="mw:Transclusion" id="mwhA" data-mw='{"parts":[{"template":{"target":{"wt":"math","href":"./Template:Math"},"params":{"1":{"wt":"1.0"}},"i":0}}]}'>1.0</span>) as compared with BM25:</li></ul>
+
+<dl id="mwhQ"><dd id="mwhg"><span class="mwe-math-element mwe-math-element-inline" typeof="mw:Extension/math" about="#mwt58" id="mwhw" data-mw='{"name":"math","attrs":{},"body":{"extsrc":" \\text{score}(D,Q) = \\sum_{i=1}^{n} \\text{IDF}(q_i) \\cdot \\left[ \\frac{f(q_i, D) \\cdot (k_1 + 1)}{f(q_i, D) + k_1 \\cdot \\left(1 - b + b \\cdot \\frac{|D|}{\\text{avgdl}}\\right)} + \\delta \\right]"}}'><span class="mwe-math-mathml-inline mwe-math-mathml-a11y" style="display: none;"><math xmlns="http://www.w3.org/1998/Math/MathML" class="mathjax_ignore" alttext="{\displaystyle {\text{score}}(D,Q)=\sum _{i=1}^{n}{\text{IDF}}(q_{i})\cdot \left[{\frac {f(q_{i},D)\cdot (k_{1}+1)}{f(q_{i},D)+k_{1}\cdot \left(1-b+b\cdot {\frac {|D|}{\text{avgdl}}}\right)}}+\delta \right]}">
+  <semantics>
+    <mrow class="MJX-TeXAtom-ORD">
+      <mstyle displaystyle="true" scriptlevel="0">
+        <mrow class="MJX-TeXAtom-ORD">
+          <mtext>score</mtext>
+        </mrow>
+        <mo stretchy="false">(</mo>
+        <mi>D</mi>
+        <mo>,</mo>
+        <mi>Q</mi>
+        <mo stretchy="false">)</mo>
+        <mo>=</mo>
+        <munderover>
+          <mo>∑<!-- ∑ --></mo>
+          <mrow class="MJX-TeXAtom-ORD">
+            <mi>i</mi>
+            <mo>=</mo>
+            <mn>1</mn>
+          </mrow>
+          <mrow class="MJX-TeXAtom-ORD">
+            <mi>n</mi>
+          </mrow>
+        </munderover>
+        <mrow class="MJX-TeXAtom-ORD">
+          <mtext>IDF</mtext>
+        </mrow>
+        <mo stretchy="false">(</mo>
+        <msub>
+          <mi>q</mi>
+          <mrow class="MJX-TeXAtom-ORD">
+            <mi>i</mi>
+          </mrow>
+        </msub>
+        <mo stretchy="false">)</mo>
+        <mo>⋅<!-- ⋅ --></mo>
+        <mrow>
+          <mo>[</mo>
+          <mrow>
+            <mrow class="MJX-TeXAtom-ORD">
+              <mfrac>
+                <mrow>
+                  <mi>f</mi>
+                  <mo stretchy="false">(</mo>
+                  <msub>
+                    <mi>q</mi>
+                    <mrow class="MJX-TeXAtom-ORD">
+                      <mi>i</mi>
+                    </mrow>
+                  </msub>
+                  <mo>,</mo>
+                  <mi>D</mi>
+                  <mo stretchy="false">)</mo>
+                  <mo>⋅<!-- ⋅ --></mo>
+                  <mo stretchy="false">(</mo>
+                  <msub>
+                    <mi>k</mi>
+                    <mrow class="MJX-TeXAtom-ORD">
+                      <mn>1</mn>
+                    </mrow>
+                  </msub>
+                  <mo>+</mo>
+                  <mn>1</mn>
+                  <mo stretchy="false">)</mo>
+                </mrow>
+                <mrow>
+                  <mi>f</mi>
+                  <mo stretchy="false">(</mo>
+                  <msub>
+                    <mi>q</mi>
+                    <mrow class="MJX-TeXAtom-ORD">
+                      <mi>i</mi>
+                    </mrow>
+                  </msub>
+                  <mo>,</mo>
+                  <mi>D</mi>
+                  <mo stretchy="false">)</mo>
+                  <mo>+</mo>
+                  <msub>
+                    <mi>k</mi>
+                    <mrow class="MJX-TeXAtom-ORD">
+                      <mn>1</mn>
+                    </mrow>
+                  </msub>
+                  <mo>⋅<!-- ⋅ --></mo>
+                  <mrow>
+                    <mo>(</mo>
+                    <mrow>
+                      <mn>1</mn>
+                      <mo>−<!-- − --></mo>
+                      <mi>b</mi>
+                      <mo>+</mo>
+                      <mi>b</mi>
+                      <mo>⋅<!-- ⋅ --></mo>
+                      <mrow class="MJX-TeXAtom-ORD">
+                        <mfrac>
+                          <mrow>
+                            <mrow class="MJX-TeXAtom-ORD">
+                              <mo stretchy="false">|</mo>
+                            </mrow>
+                            <mi>D</mi>
+                            <mrow class="MJX-TeXAtom-ORD">
+                              <mo stretchy="false">|</mo>
+                            </mrow>
+                          </mrow>
+                          <mtext>avgdl</mtext>
+                        </mfrac>
+                      </mrow>
+                    </mrow>
+                    <mo>)</mo>
+                  </mrow>
+                </mrow>
+              </mfrac>
+            </mrow>
+            <mo>+</mo>
+            <mi>δ<!-- δ --></mi>
+          </mrow>
+          <mo>]</mo>
+        </mrow>
+      </mstyle>
+    </mrow>
+    <annotation encoding="application/x-tex">{\displaystyle {\text{score}}(D,Q)=\sum _{i=1}^{n}{\text{IDF}}(q_{i})\cdot \left[{\frac {f(q_{i},D)\cdot (k_{1}+1)}{f(q_{i},D)+k_{1}\cdot \left(1-b+b\cdot {\frac {|D|}{\text{avgdl}}}\right)}}+\delta \right]}</annotation>
+  </semantics>
+</math></span><img src="https://wikimedia.org/api/rest_v1/media/math/render/svg/8dcf99b661d7e7e5aa53091d1348cc643384383c" class="mwe-math-fallback-image-inline mw-invert skin-invert" aria-hidden="true" style="vertical-align: -4.505ex; width:68.466ex; height:10.176ex;" alt="{\displaystyle {\text{score}}(D,Q)=\sum _{i=1}^{n}{\text{IDF}}(q_{i})\cdot \left[{\frac {f(q_{i},D)\cdot (k_{1}+1)}{f(q_{i},D)+k_{1}\cdot \left(1-b+b\cdot {\frac {|D|}{\text{avgdl}}}\right)}}+\delta \right]}"/></span></dd></dl>
+
+</section><section data-mw-section-id="4" id="mwiA" aria-labelledby="References"><div class="mw-heading mw-heading2"><h2 id="References">References</h2><span class="mw-editsection"><span class="mw-editsection-bracket">[</span><a href="/w/index.php?title=Okapi_BM25&amp;action=edit&amp;section=4" title="Edit section: References"><span>edit</span></a><span class="mw-editsection-bracket">]</span></span></div>
+<span class="mw-empty-elt" about="#mwt59" typeof="mw:Transclusion" id="mwiQ" data-mw='{"parts":[{"template":{"target":{"wt":"Reflist","href":"./Template:Reflist"},"params":{},"i":0}}]}'><style data-mw-deduplicate="TemplateStyles:r1327269900" typeof="mw:Extension/templatestyles" about="#mwt60" data-mw='{"name":"templatestyles","attrs":{"src":"Reflist/styles.css"}}'>.mw-parser-output .reflist-columns-2{column-width:30em}.mw-parser-output .reflist-columns-3{column-width:25em}body.skin-vector-2022 .mw-parser-output .reflist-columns-2{column-width:27em}body.skin-vector-2022 .mw-parser-output .reflist-columns-3{column-width:22.5em}.mw-parser-output .references[data-mw-group=upper-alpha]{list-style-type:upper-alpha}.mw-parser-output .references[data-mw-group=upper-roman]{list-style-type:upper-roman}.mw-parser-output .references[data-mw-group=lower-alpha]{list-style-type:lower-alpha}.mw-parser-output .references[data-mw-group=lower-greek]{list-style-type:lower-greek}.mw-parser-output .references[data-mw-group=lower-roman]{list-style-type:lower-roman}.mw-parser-output div.reflist-liststyle-upper-alpha .references{list-style-type:upper-alpha}.mw-parser-output div.reflist-liststyle-upper-roman .references{list-style-type:upper-roman}.mw-parser-output div.reflist-liststyle-lower-alpha .references{list-style-type:lower-alpha}.mw-parser-output div.reflist-liststyle-lower-greek .references{list-style-type:lower-greek}.mw-parser-output div.reflist-liststyle-lower-roman .references{list-style-type:lower-roman}</style></span><div about="#mwt59" id="mwig">
+<div class="mw-references-wrap" typeof="mw:Extension/references" about="#mwt61" id="mwiw" data-mw='{"name":"references","attrs":{"group":"","responsive":"1"},"body":{"extsrc":""}}'><ol class="mw-references references" id="mwjA"><li about="#cite_note-1" id="cite_note-1" data-mw-footnote-number="1"><span class="mw-cite-backlink" id="mwjQ"><a href="#cite_ref-1" rel="mw:referencedBy" id="mwjg"><span class="mw-linkback-text" id="mwjw">↑</span></a></span> <span id="mw-reference-text-cite_note-1" class="mw-reference-text reference-text"><style data-mw-deduplicate="TemplateStyles:r1333433106" typeof="mw:Extension/templatestyles mw:Transclusion" about="#mwt2" id="mwkA" data-mw='{"name":"templatestyles","attrs":{"src":"Module:Citation/CS1/styles.css"},"body":{"extsrc":""},"parts":[{"template":{"target":{"wt":"Cite web ","href":"./Template:Cite_web"},"params":{"title":{"wt":"OKAPI"},"url":{"wt":"https://smcse.city.ac.uk/doc/cisr/web/okapi/okapi.html"},"access-date":{"wt":"2023-10-16"},"website":{"wt":"smcse.city.ac.uk"},"archive-date":{"wt":"2023-12-07"},"archive-url":{"wt":"https://web.archive.org/web/20231207112813/https://smcse.city.ac.uk/doc/cisr/web/okapi/okapi.html"}},"i":0}}]}'>.mw-parser-output cite.citation{font-style:inherit;word-wrap:break-word}.mw-parser-output .citation q{quotes:"\"""\"""'""'"}.mw-parser-output .citation:target{background-color:rgba(0,127,255,0.133)}.mw-parser-output .id-lock-free.id-lock-free a{background:url("//upload.wikimedia.org/wikipedia/commons/6/65/Lock-green.svg")right 0.1em center/9px no-repeat}.mw-parser-output .id-lock-limited.id-lock-limited a,.mw-parser-output .id-lock-registration.id-lock-registration a{background:url("//upload.wikimedia.org/wikipedia/commons/d/d6/Lock-gray-alt-2.svg")right 0.1em center/9px no-repeat}.mw-parser-output .id-lock-subscription.id-lock-subscription a{background:url("//upload.wikimedia.org/wikipedia/commons/a/aa/Lock-red-alt-2.svg")right 0.1em center/9px no-repeat}.mw-parser-output .cs1-ws-icon a{background:url("//upload.wikimedia.org/wikipedia/commons/4/4c/Wikisource-logo.svg")right 0.1em center/12px no-repeat}body:not(.skin-timeless):not(.skin-minerva) .mw-parser-output .id-lock-free a,body:not(.skin-timeless):not(.skin-minerva) .mw-parser-output .id-lock-limited a,body:not(.skin-timeless):not(.skin-minerva) .mw-parser-output .id-lock-registration a,body:not(.skin-timeless):not(.skin-minerva) .mw-parser-output .id-lock-subscription a,body:not(.skin-timeless):not(.skin-minerva) .mw-parser-output .cs1-ws-icon a{background-size:contain;padding:0 1em 0 0}.mw-parser-output .cs1-code{color:inherit;background:inherit;border:none;padding:inherit}.mw-parser-output .cs1-hidden-error{display:none;color:var(--color-error,#bf3c2c)}.mw-parser-output .cs1-visible-error{color:var(--color-error,#bf3c2c)}.mw-parser-output .cs1-maint{display:none;color:#085;margin-left:0.3em}.mw-parser-output .cs1-kern-left{padding-left:0.2em}.mw-parser-output .cs1-kern-right{padding-right:0.2em}.mw-parser-output .citation .mw-selflink{font-weight:inherit}@media screen{.mw-parser-output .cs1-format{font-size:95%}html.skin-theme-clientpref-night .mw-parser-output .cs1-maint{color:#18911f}}@media screen and (prefers-color-scheme:dark){html.skin-theme-clientpref-os .mw-parser-output .cs1-maint{color:#18911f}}</style><cite class="citation web cs1" about="#mwt2" id="mwkQ"><a rel="mw:ExtLink nofollow" href="https://web.archive.org/web/20231207112813/https://smcse.city.ac.uk/doc/cisr/web/okapi/okapi.html" class="external text" id="mwkg">"OKAPI"</a>. <i id="mwkw">smcse.city.ac.uk</i>. Archived from <a rel="mw:ExtLink nofollow" href="https://smcse.city.ac.uk/doc/cisr/web/okapi/okapi.html" class="external text" id="mwlA">the original</a> on 2023-12-07<span class="reference-accessdate" id="mwlQ">. Retrieved <span class="nowrap" id="mwlg">2023-10-16</span></span>.</cite><span title="ctx_ver=Z39.88-2004&amp;rft_val_fmt=info%3Aofi%2Ffmt%3Akev%3Amtx%3Ajournal&amp;rft.genre=unknown&amp;rft.jtitle=smcse.city.ac.uk&amp;rft.atitle=OKAPI&amp;rft_id=https%3A%2F%2Fsmcse.city.ac.uk%2Fdoc%2Fcisr%2Fweb%2Fokapi%2Fokapi.html&amp;rfr_id=info%3Asid%2Fen.wikipedia.org%3AOkapi+BM25" class="Z3988" about="#mwt2" id="mwlw"></span></span></li>
+<li about="#cite_note-robertson2009-2" id="cite_note-robertson2009-2" data-mw-footnote-number="2"><span rel="mw:referencedBy" class="mw-cite-backlink" id="mwmA"><a href="#cite_ref-robertson2009_2-0" id="mwmQ"><span class="mw-linkback-text" id="mwmg">1</span></a> <a href="#cite_ref-robertson2009_2-1" id="mwmw"><span class="mw-linkback-text" id="mwnA">2</span></a></span> <span id="mw-reference-text-cite_note-robertson2009-2" class="mw-reference-text reference-text"><link rel="mw-deduplicated-inline-style" href="mw-data:TemplateStyles:r1333433106" about="#mwt49" typeof="mw:Extension/templatestyles mw:Transclusion" id="mwnQ" data-mw='{"name":"templatestyles","attrs":{"src":"Module:Citation/CS1/styles.css"},"body":{"extsrc":""},"parts":[{"template":{"target":{"wt":"Cite journal ","href":"./Template:Cite_journal"},"params":{"author1":{"wt":"Stephen Robertson"},"author2":{"wt":"Hugo Zaragoza"},"name-list-style":{"wt":"amp"},"title":{"wt":"The Probabilistic Relevance Framework: BM25 and Beyond"},"journal":{"wt":"Foundations and Trends in Information Retrieval"},"date":{"wt":"2009"},"url":{"wt":"http://dl.acm.org/citation.cfm?id=1704810"},"volume":{"wt":"3"},"issue":{"wt":"4"},"pages":{"wt":"333–389"},"doi":{"wt":"10.1561/1500000019"},"s2cid":{"wt":"207178704"},"url-access":{"wt":"subscription"}},"i":0}}]}'/><cite id="CITEREFStephen_RobertsonHugo_Zaragoza2009" class="citation journal cs1" about="#mwt49">Stephen Robertson &amp; Hugo Zaragoza (2009). <span class="id-lock-subscription" title="Paid subscription required" id="mwng"><a rel="mw:ExtLink nofollow" href="http://dl.acm.org/citation.cfm?id=1704810" class="external text" id="mwnw">"The Probabilistic Relevance Framework: BM25 and Beyond"</a></span>. <i id="mwoA">Foundations and Trends in Information Retrieval</i>. <b id="mwoQ">3</b> (4): <span class="nowrap" id="mwog">333–</span>389. <a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Doi_(identifier)" title="Doi (identifier)" class="mw-redirect" id="mwow">doi</a>:<a rel="mw:ExtLink nofollow" href="https://doi.org/10.1561%2F1500000019" class="external text" id="mwpA">10.1561/1500000019</a>. <a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/S2CID_(identifier)" title="S2CID (identifier)" class="mw-redirect" id="mwpQ">S2CID</a><span typeof="mw:Entity" id="mwpg"> </span><a rel="mw:ExtLink nofollow" href="https://api.semanticscholar.org/CorpusID:207178704" class="external text" id="mwpw">207178704</a>.</cite><span title="ctx_ver=Z39.88-2004&amp;rft_val_fmt=info%3Aofi%2Ffmt%3Akev%3Amtx%3Ajournal&amp;rft.genre=article&amp;rft.jtitle=Foundations+and+Trends+in+Information+Retrieval&amp;rft.atitle=The+Probabilistic+Relevance+Framework%3A+BM25+and+Beyond&amp;rft.volume=3&amp;rft.issue=4&amp;rft.pages=333-389&amp;rft.date=2009&amp;rft_id=info%3Adoi%2F10.1561%2F1500000019&amp;rft_id=https%3A%2F%2Fapi.semanticscholar.org%2FCorpusID%3A207178704%23id-name%3DS2CID&amp;rft.au=Stephen+Robertson&amp;rft.au=Hugo+Zaragoza&amp;rft_id=http%3A%2F%2Fdl.acm.org%2Fcitation.cfm%3Fid%3D1704810&amp;rfr_id=info%3Asid%2Fen.wikipedia.org%3AOkapi+BM25" class="Z3988" about="#mwt49" id="mwqA"></span></span></li>
+<li about="#cite_note-3" id="cite_note-3" data-mw-footnote-number="3"><span class="mw-cite-backlink" id="mwqQ"><a href="#cite_ref-3" rel="mw:referencedBy" id="mwqg"><span class="mw-linkback-text" id="mwqw">↑</span></a></span> <span id="mw-reference-text-cite_note-3" class="mw-reference-text reference-text">Christopher D. Manning, Prabhakar Raghavan, Hinrich Schütze. <i id="mwrA">An Introduction to Information Retrieval</i>, Cambridge University Press, 2009, p. 233.</span></li>
+<li about="#cite_note-4" id="cite_note-4" data-mw-footnote-number="4"><span class="mw-cite-backlink" id="mwrQ"><a href="#cite_ref-4" rel="mw:referencedBy" id="mwrg"><span class="mw-linkback-text" id="mwrw">↑</span></a></span> <span id="mw-reference-text-cite_note-4" class="mw-reference-text reference-text"><link rel="mw-deduplicated-inline-style" href="mw-data:TemplateStyles:r1333433106" about="#mwt45" typeof="mw:Extension/templatestyles mw:Transclusion" id="mwsA" data-mw='{"name":"templatestyles","attrs":{"src":"Module:Citation/CS1/styles.css"},"body":{"extsrc":""},"parts":[{"template":{"target":{"wt":"Cite web ","href":"./Template:Cite_web"},"params":{"url":{"wt":"http://xapian.org/docs/bm25.html"},"title":{"wt":"The BM25 Weighting Scheme"}},"i":0}}]}'/><cite class="citation web cs1" about="#mwt45" id="mwsQ"><a rel="mw:ExtLink nofollow" href="http://xapian.org/docs/bm25.html" class="external text" id="mwsg">"The BM25 Weighting Scheme"</a>.</cite><span title="ctx_ver=Z39.88-2004&amp;rft_val_fmt=info%3Aofi%2Ffmt%3Akev%3Amtx%3Abook&amp;rft.genre=unknown&amp;rft.btitle=The+BM25+Weighting+Scheme&amp;rft_id=http%3A%2F%2Fxapian.org%2Fdocs%2Fbm25.html&amp;rfr_id=info%3Asid%2Fen.wikipedia.org%3AOkapi+BM25" class="Z3988" about="#mwt45" id="mwsw"></span></span></li>
+<li about="#cite_note-5" id="cite_note-5" data-mw-footnote-number="5"><span class="mw-cite-backlink" id="mwtA"><a href="#cite_ref-5" rel="mw:referencedBy" id="mwtQ"><span class="mw-linkback-text" id="mwtg">↑</span></a></span> <span id="mw-reference-text-cite_note-5" class="mw-reference-text reference-text">Hugo Zaragoza, Nick Craswell, Michael Taylor, Suchi Saria, and Stephen Robertson. <a rel="mw:ExtLink nofollow" href="http://trec.nist.gov/pubs/trec13/papers/microsoft-cambridge.web.hard.pdf" class="external text" id="mwtw"><i id="mwuA">Microsoft Cambridge at TREC-13: Web and HARD tracks.</i></a> In Proceedings of TREC-2004.</span></li>
+<li about="#cite_note-6" id="cite_note-6" data-mw-footnote-number="6"><span class="mw-cite-backlink" id="mwuQ"><a href="#cite_ref-6" rel="mw:referencedBy" id="mwug"><span class="mw-linkback-text" id="mwuw">↑</span></a></span> <span id="mw-reference-text-cite_note-6" class="mw-reference-text reference-text"><link rel="mw-deduplicated-inline-style" href="mw-data:TemplateStyles:r1333433106" about="#mwt52" typeof="mw:Extension/templatestyles mw:Transclusion" id="mwvA" data-mw='{"name":"templatestyles","attrs":{"src":"Module:Citation/CS1/styles.css"},"body":{"extsrc":""},"parts":[{"template":{"target":{"wt":"Cite book ","href":"./Template:Cite_book"},"params":{"last1":{"wt":"Robertson"},"first1":{"wt":"Stephen"},"last2":{"wt":"Zaragoza"},"first2":{"wt":"Hugo"},"last3":{"wt":"Taylor"},"first3":{"wt":"Michael"},"title":{"wt":"Proceedings of the thirteenth ACM international conference on Information and knowledge management"},"chapter":{"wt":"Simple BM25 extension to multiple weighted fields"},"date":{"wt":"2004-11-13"},"series":{"wt":"CIKM &apos;04"},"location":{"wt":"New York, NY, USA"},"publisher":{"wt":"Association for Computing Machinery"},"pages":{"wt":"42–49"},"doi":{"wt":"10.1145/1031171.1031181"},"isbn":{"wt":"978-1-58113-874-0"},"s2cid":{"wt":"16628332"}},"i":0}}]}'/><cite id="CITEREFRobertsonZaragozaTaylor2004" class="citation book cs1" about="#mwt52">Robertson, Stephen; Zaragoza, Hugo; Taylor, Michael (2004-11-13). "Simple BM25 extension to multiple weighted fields". <i id="mwvQ">Proceedings of the thirteenth ACM international conference on Information and knowledge management</i>. CIKM '04. New York, NY, USA: Association for Computing Machinery. pp.<span typeof="mw:Entity" id="mwvg"> </span><span class="nowrap" id="mwvw">42–</span>49. <a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Doi_(identifier)" title="Doi (identifier)" class="mw-redirect" id="mwwA">doi</a>:<a rel="mw:ExtLink nofollow" href="https://doi.org/10.1145%2F1031171.1031181" class="external text" id="mwwQ">10.1145/1031171.1031181</a>. <a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/ISBN_(identifier)" title="ISBN (identifier)" class="mw-redirect" id="mwwg">ISBN</a><span typeof="mw:Entity" id="mwww"> </span><a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Special:BookSources/978-1-58113-874-0" title="Special:BookSources/978-1-58113-874-0" id="mwxA"><bdi id="mwxQ">978-1-58113-874-0</bdi></a>. <a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/S2CID_(identifier)" title="S2CID (identifier)" class="mw-redirect" id="mwxg">S2CID</a><span typeof="mw:Entity" id="mwxw"> </span><a rel="mw:ExtLink nofollow" href="https://api.semanticscholar.org/CorpusID:16628332" class="external text" id="mwyA">16628332</a>.</cite><span title="ctx_ver=Z39.88-2004&amp;rft_val_fmt=info%3Aofi%2Ffmt%3Akev%3Amtx%3Abook&amp;rft.genre=bookitem&amp;rft.atitle=Simple+BM25+extension+to+multiple+weighted+fields&amp;rft.btitle=Proceedings+of+the+thirteenth+ACM+international+conference+on+Information+and+knowledge+management&amp;rft.place=New+York%2C+NY%2C+USA&amp;rft.series=CIKM+%2704&amp;rft.pages=42-49&amp;rft.pub=Association+for+Computing+Machinery&amp;rft.date=2004-11-13&amp;rft_id=https%3A%2F%2Fapi.semanticscholar.org%2FCorpusID%3A16628332%23id-name%3DS2CID&amp;rft_id=info%3Adoi%2F10.1145%2F1031171.1031181&amp;rft.isbn=978-1-58113-874-0&amp;rft.aulast=Robertson&amp;rft.aufirst=Stephen&amp;rft.au=Zaragoza%2C+Hugo&amp;rft.au=Taylor%2C+Michael&amp;rfr_id=info%3Asid%2Fen.wikipedia.org%3AOkapi+BM25" class="Z3988" about="#mwt52" id="mwyQ"></span></span></li>
+<li about="#cite_note-7" id="cite_note-7" data-mw-footnote-number="7"><span class="mw-cite-backlink" id="mwyg"><a href="#cite_ref-7" rel="mw:referencedBy" id="mwyw"><span class="mw-linkback-text" id="mwzA">↑</span></a></span> <span id="mw-reference-text-cite_note-7" class="mw-reference-text reference-text">Yuanhua Lv and ChengXiang Zhai. <a rel="mw:ExtLink nofollow" href="https://doi.org/10.1145/2063576.2063584" class="external text" id="mwzQ"><i id="mwzg">Lower-bounding term frequency normalization.</i></a> In Proceedings of CIKM'2011, pages 7-16.</span></li>
+</ol></div></div>
+
+</section><section data-mw-section-id="5" id="mwzw" aria-labelledby="General_references"><div class="mw-heading mw-heading2"><h2 id="General_references">General references</h2><span class="mw-editsection"><span class="mw-editsection-bracket">[</span><a href="/w/index.php?title=Okapi_BM25&amp;action=edit&amp;section=5" title="Edit section: General references"><span>edit</span></a><span class="mw-editsection-bracket">]</span></span></div>
+
+<ul id="mw0A"><li id="mw0Q"><link rel="mw-deduplicated-inline-style" href="mw-data:TemplateStyles:r1333433106" about="#mwt62" typeof="mw:Extension/templatestyles mw:Transclusion" id="mw0g" data-mw='{"name":"templatestyles","attrs":{"src":"Module:Citation/CS1/styles.css"},"body":{"extsrc":""},"parts":[{"template":{"target":{"wt":"cite conference","href":"./Template:Cite_conference"},"params":{"author1":{"wt":"Stephen E. Robertson"},"author2":{"wt":"Steve Walker"},"author3":{"wt":"Susan Jones"},"author4":{"wt":"Micheline Hancock-Beaulieu"},"author5":{"wt":"Mike Gatford"},"name-list-style":{"wt":"amp"},"title":{"wt":"Okapi at TREC-3"},"conference":{"wt":"Proceedings of the Third Text REtrieval Conference (TREC 1994)"},"conference-url":{"wt":"http://trec.nist.gov/pubs/trec3/t3_proceedings.html"},"location":{"wt":"Gaithersburg, USA"},"date":{"wt":"November 1994"},"url":{"wt":"http://trec.nist.gov/pubs/trec3/papers/city.ps.gz"}},"i":0}}]}'/><cite id="CITEREFStephen_E._RobertsonSteve_WalkerSusan_JonesMicheline_Hancock-Beaulieu1994" class="citation conference cs1" about="#mwt62">Stephen E. Robertson; Steve Walker; Susan Jones; Micheline Hancock-Beaulieu &amp; Mike Gatford (November 1994). <a rel="mw:ExtLink nofollow" href="http://trec.nist.gov/pubs/trec3/papers/city.ps.gz" class="external text"><i>Okapi at TREC-3</i></a>. <a rel="mw:ExtLink nofollow" href="http://trec.nist.gov/pubs/trec3/t3_proceedings.html" class="external text">Proceedings of the Third Text REtrieval Conference (TREC 1994)</a>. Gaithersburg, USA.</cite><span title="ctx_ver=Z39.88-2004&amp;rft_val_fmt=info%3Aofi%2Ffmt%3Akev%3Amtx%3Abook&amp;rft.genre=conference&amp;rft.btitle=Okapi+at+TREC-3&amp;rft.place=Gaithersburg%2C+USA&amp;rft.date=1994-11&amp;rft.au=Stephen+E.+Robertson&amp;rft.au=Steve+Walker&amp;rft.au=Susan+Jones&amp;rft.au=Micheline+Hancock-Beaulieu&amp;rft.au=Mike+Gatford&amp;rft_id=http%3A%2F%2Ftrec.nist.gov%2Fpubs%2Ftrec3%2Fpapers%2Fcity.ps.gz&amp;rfr_id=info%3Asid%2Fen.wikipedia.org%3AOkapi+BM25" class="Z3988" about="#mwt62" id="mw0w"></span></li>
+<li id="mw1A"><link rel="mw-deduplicated-inline-style" href="mw-data:TemplateStyles:r1333433106" about="#mwt64" typeof="mw:Extension/templatestyles mw:Transclusion" id="mw1Q" data-mw='{"name":"templatestyles","attrs":{"src":"Module:Citation/CS1/styles.css"},"body":{"extsrc":""},"parts":[{"template":{"target":{"wt":"cite conference","href":"./Template:Cite_conference"},"params":{"author1":{"wt":"Stephen E. Robertson"},"author2":{"wt":"Steve Walker"},"author3":{"wt":"Micheline Hancock-Beaulieu"},"name-list-style":{"wt":"amp"},"title":{"wt":"Okapi at TREC-7"},"conference":{"wt":"Proceedings of the Seventh Text REtrieval Conference"},"conference-url":{"wt":"http://trec.nist.gov/pubs/trec7/t7_proceedings.html"},"location":{"wt":"Gaithersburg, USA"},"date":{"wt":"November 1998"},"url":{"wt":"http://trec.nist.gov/pubs/trec7/papers/okapi_proc.pdf.gz"}},"i":0}}]}'/><cite id="CITEREFStephen_E._RobertsonSteve_WalkerMicheline_Hancock-Beaulieu1998" class="citation conference cs1" about="#mwt64">Stephen E. Robertson; Steve Walker &amp; Micheline Hancock-Beaulieu (November 1998). <a rel="mw:ExtLink nofollow" href="http://trec.nist.gov/pubs/trec7/papers/okapi_proc.pdf.gz" class="external text"><i>Okapi at TREC-7</i></a>. <a rel="mw:ExtLink nofollow" href="http://trec.nist.gov/pubs/trec7/t7_proceedings.html" class="external text">Proceedings of the Seventh Text REtrieval Conference</a>. Gaithersburg, USA.</cite><span title="ctx_ver=Z39.88-2004&amp;rft_val_fmt=info%3Aofi%2Ffmt%3Akev%3Amtx%3Abook&amp;rft.genre=conference&amp;rft.btitle=Okapi+at+TREC-7&amp;rft.place=Gaithersburg%2C+USA&amp;rft.date=1998-11&amp;rft.au=Stephen+E.+Robertson&amp;rft.au=Steve+Walker&amp;rft.au=Micheline+Hancock-Beaulieu&amp;rft_id=http%3A%2F%2Ftrec.nist.gov%2Fpubs%2Ftrec7%2Fpapers%2Fokapi_proc.pdf.gz&amp;rfr_id=info%3Asid%2Fen.wikipedia.org%3AOkapi+BM25" class="Z3988" about="#mwt64" id="mw1g"></span></li>
+<li id="mw1w"><link rel="mw-deduplicated-inline-style" href="mw-data:TemplateStyles:r1333433106" about="#mwt66" typeof="mw:Extension/templatestyles mw:Transclusion" id="mw2A" data-mw='{"name":"templatestyles","attrs":{"src":"Module:Citation/CS1/styles.css"},"body":{"extsrc":""},"parts":[{"template":{"target":{"wt":"Cite journal ","href":"./Template:Cite_journal"},"params":{"doi":{"wt":"10.1016/S0306-4573(00)00015-7"},"title":{"wt":"A probabilistic model of information retrieval: Development and comparative experiments: Part 1"},"journal":{"wt":"Information Processing &amp; Management"},"volume":{"wt":"36"},"issue":{"wt":"6"},"pages":{"wt":"779–808"},"year":{"wt":"2000"},"last1":{"wt":"Spärck Jones"},"first1":{"wt":"K."},"author-link1":{"wt":"Karen Spärck Jones"},"last2":{"wt":"Walker"},"first2":{"wt":"S."},"last3":{"wt":"Robertson"},"first3":{"wt":"S. E."},"author-link3":{"wt":"Stephen Robertson (computer scientist)"}},"i":0}}]}'/><cite id="CITEREFSpärck_JonesWalkerRobertson2000" class="citation journal cs1" about="#mwt66"><a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Karen_Spärck_Jones" title="Karen Spärck Jones">Spärck Jones, K.</a>; Walker, S.; <a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Stephen_Robertson_(computer_scientist)" title="Stephen Robertson (computer scientist)">Robertson, S. E.</a> (2000). "A probabilistic model of information retrieval: Development and comparative experiments: Part 1". <i>Information Processing &amp; Management</i>. <b>36</b> (6): <span class="nowrap">779–</span>808. <a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Doi_(identifier)" title="Doi (identifier)" class="mw-redirect">doi</a>:<a rel="mw:ExtLink nofollow" href="https://doi.org/10.1016%2FS0306-4573%2800%2900015-7" class="external text">10.1016/S0306-4573(00)00015-7</a>.</cite><span title="ctx_ver=Z39.88-2004&amp;rft_val_fmt=info%3Aofi%2Ffmt%3Akev%3Amtx%3Ajournal&amp;rft.genre=article&amp;rft.jtitle=Information+Processing+%26+Management&amp;rft.atitle=A+probabilistic+model+of+information+retrieval%3A+Development+and+comparative+experiments%3A+Part+1&amp;rft.volume=36&amp;rft.issue=6&amp;rft.pages=779-808&amp;rft.date=2000&amp;rft_id=info%3Adoi%2F10.1016%2FS0306-4573%2800%2900015-7&amp;rft.aulast=Sp%C3%A4rck+Jones&amp;rft.aufirst=K.&amp;rft.au=Walker%2C+S.&amp;rft.au=Robertson%2C+S.+E.&amp;rfr_id=info%3Asid%2Fen.wikipedia.org%3AOkapi+BM25" class="Z3988" about="#mwt66" id="mw2Q"></span></li>
+<li id="mw2g"><link rel="mw-deduplicated-inline-style" href="mw-data:TemplateStyles:r1333433106" about="#mwt68" typeof="mw:Extension/templatestyles mw:Transclusion" id="mw2w" data-mw='{"name":"templatestyles","attrs":{"src":"Module:Citation/CS1/styles.css"},"body":{"extsrc":""},"parts":[{"template":{"target":{"wt":"Cite journal ","href":"./Template:Cite_journal"},"params":{"doi":{"wt":"10.1016/S0306-4573(00)00016-9"},"title":{"wt":"A probabilistic model of information retrieval: Development and comparative experiments: Part 2"},"journal":{"wt":"Information Processing &amp; Management"},"volume":{"wt":"36"},"issue":{"wt":"6"},"pages":{"wt":"809–840"},"year":{"wt":"2000"},"last1":{"wt":"Spärck Jones"},"first1":{"wt":"K."},"author-link1":{"wt":"Karen Spärck Jones"},"last2":{"wt":"Walker"},"first2":{"wt":"S."},"last3":{"wt":"Robertson"},"first3":{"wt":"S. E."},"author-link3":{"wt":"Stephen Robertson (computer scientist)"}},"i":0}}]}'/><cite id="CITEREFSpärck_JonesWalkerRobertson2000" class="citation journal cs1" about="#mwt68"><a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Karen_Spärck_Jones" title="Karen Spärck Jones">Spärck Jones, K.</a>; Walker, S.; <a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Stephen_Robertson_(computer_scientist)" title="Stephen Robertson (computer scientist)">Robertson, S. E.</a> (2000). "A probabilistic model of information retrieval: Development and comparative experiments: Part 2". <i>Information Processing &amp; Management</i>. <b>36</b> (6): <span class="nowrap">809–</span>840. <a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Doi_(identifier)" title="Doi (identifier)" class="mw-redirect">doi</a>:<a rel="mw:ExtLink nofollow" href="https://doi.org/10.1016%2FS0306-4573%2800%2900016-9" class="external text">10.1016/S0306-4573(00)00016-9</a>.</cite><span title="ctx_ver=Z39.88-2004&amp;rft_val_fmt=info%3Aofi%2Ffmt%3Akev%3Amtx%3Ajournal&amp;rft.genre=article&amp;rft.jtitle=Information+Processing+%26+Management&amp;rft.atitle=A+probabilistic+model+of+information+retrieval%3A+Development+and+comparative+experiments%3A+Part+2&amp;rft.volume=36&amp;rft.issue=6&amp;rft.pages=809-840&amp;rft.date=2000&amp;rft_id=info%3Adoi%2F10.1016%2FS0306-4573%2800%2900016-9&amp;rft.aulast=Sp%C3%A4rck+Jones&amp;rft.aufirst=K.&amp;rft.au=Walker%2C+S.&amp;rft.au=Robertson%2C+S.+E.&amp;rfr_id=info%3Asid%2Fen.wikipedia.org%3AOkapi+BM25" class="Z3988" about="#mwt68" id="mw3A"></span></li>
+<li id="mw3Q"><link rel="mw-deduplicated-inline-style" href="mw-data:TemplateStyles:r1333433106" about="#mwt70" typeof="mw:Extension/templatestyles mw:Transclusion" id="mw3g" data-mw='{"name":"templatestyles","attrs":{"src":"Module:Citation/CS1/styles.css"},"body":{"extsrc":""},"parts":[{"template":{"target":{"wt":"Cite journal ","href":"./Template:Cite_journal"},"params":{"author1":{"wt":"Stephen Robertson"},"author2":{"wt":"Hugo Zaragoza"},"name-list-style":{"wt":"amp"},"title":{"wt":"The Probabilistic Relevance Framework: BM25 and Beyond"},"journal":{"wt":"Foundations and Trends in Information Retrieval"},"date":{"wt":"2009"},"url":{"wt":"http://dl.acm.org/citation.cfm?id=1704810"},"volume":{"wt":"3"},"issue":{"wt":"4"},"pages":{"wt":"333–389"},"doi":{"wt":"10.1561/1500000019"},"s2cid":{"wt":"207178704"},"url-access":{"wt":"subscription"}},"i":0}}]}'/><cite id="mwAA" class="citation journal cs1" about="#mwt70" data-x-id="CITEREFStephen_RobertsonHugo_Zaragoza2009">Stephen Robertson &amp; Hugo Zaragoza (2009). <span class="id-lock-subscription" title="Paid subscription required"><a rel="mw:ExtLink nofollow" href="http://dl.acm.org/citation.cfm?id=1704810" class="external text">"The Probabilistic Relevance Framework: BM25 and Beyond"</a></span>. <i>Foundations and Trends in Information Retrieval</i>. <b>3</b> (4): <span class="nowrap">333–</span>389. <a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Doi_(identifier)" title="Doi (identifier)" class="mw-redirect">doi</a>:<a rel="mw:ExtLink nofollow" href="https://doi.org/10.1561%2F1500000019" class="external text">10.1561/1500000019</a>. <a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/S2CID_(identifier)" title="S2CID (identifier)" class="mw-redirect">S2CID</a><span typeof="mw:Entity"> </span><a rel="mw:ExtLink nofollow" href="https://api.semanticscholar.org/CorpusID:207178704" class="external text">207178704</a>.</cite><span title="ctx_ver=Z39.88-2004&amp;rft_val_fmt=info%3Aofi%2Ffmt%3Akev%3Amtx%3Ajournal&amp;rft.genre=article&amp;rft.jtitle=Foundations+and+Trends+in+Information+Retrieval&amp;rft.atitle=The+Probabilistic+Relevance+Framework%3A+BM25+and+Beyond&amp;rft.volume=3&amp;rft.issue=4&amp;rft.pages=333-389&amp;rft.date=2009&amp;rft_id=info%3Adoi%2F10.1561%2F1500000019&amp;rft_id=https%3A%2F%2Fapi.semanticscholar.org%2FCorpusID%3A207178704%23id-name%3DS2CID&amp;rft.au=Stephen+Robertson&amp;rft.au=Hugo+Zaragoza&amp;rft_id=http%3A%2F%2Fdl.acm.org%2Fcitation.cfm%3Fid%3D1704810&amp;rfr_id=info%3Asid%2Fen.wikipedia.org%3AOkapi+BM25" class="Z3988" about="#mwt70" id="mw3w"></span></li></ul>
+
+</section><section data-mw-section-id="6" id="mw4A" aria-labelledby="External_links"><div class="mw-heading mw-heading2"><h2 id="External_links">External links</h2><span class="mw-editsection"><span class="mw-editsection-bracket">[</span><a href="/w/index.php?title=Okapi_BM25&amp;action=edit&amp;section=6" title="Edit section: External links"><span>edit</span></a><span class="mw-editsection-bracket">]</span></span></div>
+<ul id="mw4Q"><li id="mw4g"><link rel="mw-deduplicated-inline-style" href="mw-data:TemplateStyles:r1333433106" about="#mwt72" typeof="mw:Extension/templatestyles mw:Transclusion" id="mw4w" data-mw='{"name":"templatestyles","attrs":{"src":"Module:Citation/CS1/styles.css"},"body":{"extsrc":""},"parts":[{"template":{"target":{"wt":"cite book","href":"./Template:Cite_book"},"params":{"last1":{"wt":"Robertson"},"first1":{"wt":"Stephen"},"last2":{"wt":"Zaragoza"},"first2":{"wt":"Hugo"},"title":{"wt":"The Probabilistic Relevance Framework: BM25 and Beyond"},"date":{"wt":"2009"},"publisher":{"wt":"NOW Publishers, Inc."},"isbn":{"wt":"978-1-60198-308-4\n&lt;!-- |url=http://staff.city.ac.uk/~sb317/papers/foundations_bm25_review.pdf -->"},"url":{"wt":"https://www.staff.city.ac.uk/~sbrp622/papers/foundations_bm25_review.pdf"},"author1-link":{"wt":"Stephen Robertson (computer scientist)"}},"i":0}}]}'/><cite id="CITEREFRobertsonZaragoza2009" class="citation book cs1" about="#mwt72"><a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Stephen_Robertson_(computer_scientist)" title="Stephen Robertson (computer scientist)">Robertson, Stephen</a>; Zaragoza, Hugo (2009). <a rel="mw:ExtLink nofollow" href="https://www.staff.city.ac.uk/~sbrp622/papers/foundations_bm25_review.pdf" class="external text"><i>The Probabilistic Relevance Framework: BM25 and Beyond</i></a> <span class="cs1-format">(PDF)</span>. NOW Publishers, Inc. <a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/ISBN_(identifier)" title="ISBN (identifier)" class="mw-redirect">ISBN</a><span typeof="mw:Entity"> </span><a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Special:BookSources/978-1-60198-308-4" title="Special:BookSources/978-1-60198-308-4"><bdi>978-1-60198-308-4</bdi></a>.</cite><span title="ctx_ver=Z39.88-2004&amp;rft_val_fmt=info%3Aofi%2Ffmt%3Akev%3Amtx%3Abook&amp;rft.genre=book&amp;rft.btitle=The+Probabilistic+Relevance+Framework%3A+BM25+and+Beyond&amp;rft.pub=NOW+Publishers%2C+Inc.&amp;rft.date=2009&amp;rft.isbn=978-1-60198-308-4&amp;rft.aulast=Robertson&amp;rft.aufirst=Stephen&amp;rft.au=Zaragoza%2C+Hugo&amp;rft_id=https%3A%2F%2Fwww.staff.city.ac.uk%2F~sbrp622%2Fpapers%2Ffoundations_bm25_review.pdf&amp;rfr_id=info%3Asid%2Fen.wikipedia.org%3AOkapi+BM25" class="Z3988" about="#mwt72" id="mw5A"></span></li></ul>
+
+<link rel="mw:PageProp/Category" href="./Category:Ranking_functions" id="mw5Q"/></section>
+<!-- 
+NewPP limit report
+Parsed by mw‐web.eqiad.main‐579cc7f7f9‐zn76j
+Cached time: 20260902170646
+Cache expiry: 2592000
+Cache expiry source: Module:Citation/CS1 (os.date(%Y))
+Reduced expiry: false
+Complications: [vary‐revision‐sha1, show‐toc, use‐parsoid]
+CPU time usage: 0.289 seconds
+Real time usage: 1.075 seconds
+Preprocessor visited node count: 836/1000000
+Revision size: 9735/2097152 bytes
+Post‐expand include size: 22008/2097152 bytes
+Template argument size: 655/2097152 bytes
+Highest expansion depth: 8/100
+Expensive parser function count: 1/500
+Unstrip recursion depth: 0/20
+Unstrip post‐expand size: 25261/5000000 bytes
+Lua time usage: 0.059/10.000 seconds
+Lua memory usage: 5097153/52428800 bytes
+Number of Wikibase entities loaded: 0/500
+-->
+<!--
+Transclusion expansion time report (%,ms,calls,template)
+100.00%  997.422      1 -total
+  4.45%   44.379      1 Template:Short_description
+  3.25%   32.397      2 Template:Cite_web
+  2.61%   25.995      2 Template:Pagetype
+  1.30%   12.968      4 Template:Cite_journal
+  1.11%   11.058      5 Template:Main_other
+  0.97%    9.637      1 Template:SDcat
+  0.69%    6.871      2 Template:Cite_book
+  0.52%    5.186      2 Template:Cite_conference
+  0.23%    2.270      2 Template:Math
+-->
+
+<!-- Render ID ad985ee3-a6f0-11f1-976c-41f7a82aeb3a -->
+
+<!-- Saved in parser cache with key enwiki:parsoid-pcache:9511414:|#|:idhash:useParsoid=1 and timestamp 20260902170646 and revision id 1372301996. Rendering was triggered because: page_view
+ -->
+
+<!-- Parsoid 0.24.0.0-alpha21 -->
+</div><!--
+Post‐processing cache key enwiki:postproc‐parsoid‐pcache:9511414:|#|:idhash:injectTOC=0!postproc=1!skin=vector‐2022!useParsoid=1!visibleLinks=wtsingle, generated at 20260902170646
+--><noscript><img src="https://en.wikipedia.org/wiki/Special:CentralAutoLogin/start?useformat=desktop&amp;type=1x1&amp;usesul3=1" alt="" width="1" height="1" style="border: none; position: absolute;"></noscript>
+<div class="printfooter" data-nosnippet="">Retrieved from "<a dir="ltr" href="https://en.wikipedia.org/w/index.php?title=Okapi_BM25&amp;oldid=1372301996">https://en.wikipedia.org/w/index.php?title=Okapi_BM25&amp;oldid=1372301996</a>"</div></div>
+					<div id="catlinks" class="catlinks" data-mw-interface=""><div id="mw-normal-catlinks" class="mw-normal-catlinks"><a href="/wiki/Help:Category" title="Help:Category">Category</a>: <ul><li><a href="/wiki/Category:Ranking_functions" title="Category:Ranking functions">Ranking functions</a></li></ul></div><div id="mw-hidden-catlinks" class="mw-hidden-catlinks mw-hidden-cats-hidden">Hidden categories: <ul><li><a href="/wiki/Category:Articles_with_short_description" title="Category:Articles with short description">Articles with short description</a></li><li><a href="/wiki/Category:Short_description_matches_Wikidata" title="Category:Short description matches Wikidata">Short description matches Wikidata</a></li></ul></div></div>
+				</div>
+			</main>
+			
+		</div>
+		<div class="mw-footer-container">
+			<footer id="footer" class="mw-footer" >
+				<ul id="footer-info" class="mw-portlet mw-portlet-footer-info">
+	<li id="footer-info-lastmod"> This page was last edited on 31 August 2026, at 04:58<span class="anonymous-show">&#160;(UTC)</span>.</li>
+	<li id="footer-info-renderedwith">Page was rendered with <a href="https://www.mediawiki.org/wiki/Special:MyLanguage/Parsoid" class="extiw" title="mw:Special:MyLanguage/Parsoid">Parsoid</a>.</li>
+	<li id="footer-info-copyright">Text is available under the <a href="/wiki/Wikipedia:Text_of_the_Creative_Commons_Attribution-ShareAlike_4.0_International_License" title="Wikipedia:Text of the Creative Commons Attribution-ShareAlike 4.0 International License">Creative Commons Attribution-ShareAlike 4.0 License</a>;
+additional terms may apply. By using this site, you agree to the <a href="https://foundation.wikimedia.org/wiki/Special:MyLanguage/Policy:Terms_of_Use" class="extiw" title="foundation:Special:MyLanguage/Policy:Terms of Use">Terms of Use</a> and <a href="https://foundation.wikimedia.org/wiki/Special:MyLanguage/Policy:Privacy_policy" class="extiw" title="foundation:Special:MyLanguage/Policy:Privacy policy">Privacy Policy</a>. Wikipedia® is a registered trademark of the <a rel="nofollow" class="external text" href="https://wikimediafoundation.org/">Wikimedia Foundation, Inc.</a>, a non-profit organization.</li>
+</ul>
+
+				<ul id="footer-places" class="mw-portlet mw-portlet-footer-places">
+	<li id="footer-places-privacy"><a href="https://foundation.wikimedia.org/wiki/Special:MyLanguage/Policy:Privacy_policy">Privacy policy</a></li>
+	<li id="footer-places-about"><a href="/wiki/Wikipedia:About">About Wikipedia</a></li>
+	<li id="footer-places-disclaimers"><a href="/wiki/Wikipedia:General_disclaimer">Disclaimers</a></li>
+	<li id="footer-places-contact"><a href="//en.wikipedia.org/wiki/Wikipedia:Contact_us">Contact Wikipedia</a></li>
+	<li id="footer-places-legal-safety-contacts"><a href="https://foundation.wikimedia.org/wiki/Special:MyLanguage/Legal:Wikimedia_Foundation_Legal_and_Safety_Contact_Information">Legal &amp; safety contacts</a></li>
+	<li id="footer-places-wm-codeofconduct"><a href="https://foundation.wikimedia.org/wiki/Special:MyLanguage/Policy:Universal_Code_of_Conduct">Code of Conduct</a></li>
+	<li id="footer-places-developers"><a href="https://developer.wikimedia.org">Developers</a></li>
+	<li id="footer-places-statslink"><a href="https://stats.wikimedia.org/#/en.wikipedia.org">Statistics</a></li>
+	<li id="footer-places-cookiestatement"><a href="https://foundation.wikimedia.org/wiki/Special:MyLanguage/Policy:Cookie_statement">Cookie statement</a></li>
+	<li id="footer-places-mobileview"><a href="//en.wikipedia.org/w/index.php?title=Okapi_BM25&amp;mobileaction=toggle_view_mobile" class="noprint stopMobileRedirectToggle">Mobile view</a></li>
+</ul>
+
+				<ul id="footer-icons" class="mw-portlet mw-portlet-footer-icons noprint">
+	<li id="footer-copyrightico"><a href="https://www.wikimedia.org/" class="cdx-button cdx-button--fake-button cdx-button--size-large cdx-button--fake-button--enabled"><picture><source media="(min-width: 500px)" srcset="/static/images/footer/wikimedia-button.svg" width="84" height="29"><img src="/static/images/footer/wikimedia.svg" width="25" height="25" alt="Wikimedia Foundation" lang="en" loading="lazy"></picture></a></li>
+	<li id="footer-poweredbyico"><a href="https://www.mediawiki.org/" class="cdx-button cdx-button--fake-button cdx-button--size-large cdx-button--fake-button--enabled"><picture><source media="(min-width: 500px)" srcset="/w/resources/assets/poweredby_mediawiki.svg" width="88" height="31"><img src="/w/resources/assets/mediawiki_compact.svg" alt="Powered by MediaWiki" lang="en" width="25" height="25" loading="lazy"></picture></a></li>
+</ul>
+
+			</footer>
+		</div>
+	</div> 
+</div> 
+<div class="vector-header-container vector-sticky-header-container no-font-mode-scale">
+	<div id="vector-sticky-header" class="vector-sticky-header">
+		<div class="vector-sticky-header-start">
+			<div class="vector-sticky-header-icon-start vector-button-flush-left" aria-hidden="true">
+				<button class="cdx-button cdx-button--weight-quiet cdx-button--icon-only vector-sticky-header-search-toggle" tabindex="-1" data-event-name="ui.vector-sticky-search-form.icon"><span class="vector-icon mw-ui-icon-search mw-ui-icon-wikimedia-search cdx-button__icon"></span>
+
+<span>Search</span>
+			</button>
+		</div>
+			
+		<div role="search" class="vector-search-box-vue  vector-search-box-show-thumbnail vector-search-box">
+			<div class="vector-typeahead-search-container">
+				<div class="cdx-typeahead-search cdx-typeahead-search--show-thumbnail">
+					<form action="/w/index.php" id="vector-sticky-search-form" class="cdx-search-input cdx-search-input--has-end-button">
+						<div  class="cdx-search-input__input-wrapper"  data-search-loc="header-moved">
+							<div class="cdx-text-input cdx-text-input--has-start-icon">
+								<input
+									class="cdx-text-input__input mw-searchInput" autocomplete="off"
+									
+									type="search" name="search" placeholder="Search Wikipedia">
+								<span class="cdx-text-input__icon cdx-text-input__start-icon"></span>
+							</div>
+							<input type="hidden" name="title" value="Special:Search">
+						</div>
+						<button class="cdx-button cdx-search-input__end-button">Search</button>
+					</form>
+				</div>
+			</div>
+		</div>
+		<div class="vector-sticky-header-context-bar">
+				<nav aria-label="Contents" class="vector-toc-landmark">
+						
+					<div id="vector-sticky-header-toc" class="vector-dropdown mw-portlet mw-portlet-sticky-header-toc vector-sticky-header-toc vector-button-flush-left"  >
+						<input type="checkbox" id="vector-sticky-header-toc-checkbox" role="button" aria-haspopup="true" data-event-name="ui.dropdown-vector-sticky-header-toc" class="vector-dropdown-checkbox "  aria-label="Toggle the table of contents"   >
+						<label id="vector-sticky-header-toc-label" for="vector-sticky-header-toc-checkbox" class="vector-dropdown-label cdx-button cdx-button--fake-button cdx-button--fake-button--enabled cdx-button--weight-quiet cdx-button--icon-only " aria-hidden="true"  ><span class="vector-icon mw-ui-icon-listBullet mw-ui-icon-wikimedia-listBullet cdx-button__icon"></span>
+
+<span class="vector-dropdown-label-text">Toggle the table of contents</span>
+						</label>
+						<div class="vector-dropdown-content">
+					
+						<div id="vector-sticky-header-toc-unpinned-container" class="vector-unpinned-container">
+						</div>
+					
+						</div>
+					</div>
+			</nav>
+				<div class="vector-sticky-header-context-bar-primary" aria-hidden="true" ><span lang="en" dir="ltr"><span class="mw-page-title-main">Okapi BM25</span></span></div>
+			</div>
+		</div>
+		<div class="vector-sticky-header-end" aria-hidden="true">
+			<div class="vector-sticky-header-icons">
+				<a href="#" class="cdx-button cdx-button--fake-button cdx-button--fake-button--enabled cdx-button--weight-quiet cdx-button--icon-only" id="ca-talk-sticky-header" tabindex="-1" data-event-name="talk-sticky-header"><span class="vector-icon mw-ui-icon-speechBubbles mw-ui-icon-wikimedia-speechBubbles cdx-button__icon"></span>
+
+<span></span>
+			</a>
+			<a href="#" class="cdx-button cdx-button--fake-button cdx-button--fake-button--enabled cdx-button--weight-quiet cdx-button--icon-only" id="ca-subject-sticky-header" tabindex="-1" data-event-name="subject-sticky-header"><span class="vector-icon mw-ui-icon-article mw-ui-icon-wikimedia-article cdx-button__icon"></span>
+
+<span></span>
+			</a>
+			<a href="#" class="cdx-button cdx-button--fake-button cdx-button--fake-button--enabled cdx-button--weight-quiet cdx-button--icon-only" id="ca-history-sticky-header" tabindex="-1" data-event-name="history-sticky-header"><span class="vector-icon mw-ui-icon-wikimedia-history mw-ui-icon-wikimedia-wikimedia-history cdx-button__icon"></span>
+
+<span></span>
+			</a>
+			<a href="#" class="cdx-button cdx-button--fake-button cdx-button--fake-button--enabled cdx-button--weight-quiet cdx-button--icon-only mw-watchlink" id="ca-watchstar-sticky-header" tabindex="-1" data-event-name="watch-sticky-header"><span class="vector-icon mw-ui-icon-wikimedia-star mw-ui-icon-wikimedia-wikimedia-star cdx-button__icon"></span>
+
+<span></span>
+			</a>
+			<a href="#" class="cdx-button cdx-button--fake-button cdx-button--fake-button--enabled cdx-button--weight-quiet cdx-button--icon-only" id="ca-edit-sticky-header" tabindex="-1" data-event-name="wikitext-edit-sticky-header"><span class="vector-icon mw-ui-icon-wikimedia-wikiText mw-ui-icon-wikimedia-wikimedia-wikiText cdx-button__icon"></span>
+
+<span></span>
+			</a>
+			<a href="#" class="cdx-button cdx-button--fake-button cdx-button--fake-button--enabled cdx-button--weight-quiet cdx-button--icon-only" id="ca-ve-edit-sticky-header" tabindex="-1" data-event-name="ve-edit-sticky-header"><span class="vector-icon mw-ui-icon-wikimedia-edit mw-ui-icon-wikimedia-wikimedia-edit cdx-button__icon"></span>
+
+<span></span>
+			</a>
+			<a href="#" class="cdx-button cdx-button--fake-button cdx-button--fake-button--enabled cdx-button--weight-quiet cdx-button--icon-only" id="ca-viewsource-sticky-header" tabindex="-1" data-event-name="ve-edit-protected-sticky-header"><span class="vector-icon mw-ui-icon-wikimedia-editLock mw-ui-icon-wikimedia-wikimedia-editLock cdx-button__icon"></span>
+
+<span></span>
+			</a>
+		</div>
+			<div class="vector-sticky-header-buttons">
+				<button class="cdx-button cdx-button--weight-quiet mw-interlanguage-selector" id="p-lang-btn-sticky-header" tabindex="-1" data-event-name="ui.dropdown-p-lang-btn-sticky-header"><span class="vector-icon mw-ui-icon-wikimedia-language mw-ui-icon-wikimedia-wikimedia-language cdx-button__icon"></span>
+
+<span>9 languages</span>
+			</button>
+			<a href="#" class="cdx-button cdx-button--fake-button cdx-button--fake-button--enabled cdx-button--weight-quiet cdx-button--action-progressive" id="ca-addsection-sticky-header" tabindex="-1" data-event-name="addsection-sticky-header"><span class="vector-icon mw-ui-icon-speechBubbleAdd-progressive mw-ui-icon-wikimedia-speechBubbleAdd-progressive cdx-button__icon"></span>
+
+<span>Add topic</span>
+			</a>
+		</div>
+			<div class="vector-sticky-header-icon-end">
+				<div class="vector-user-links">
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+<div class="mw-portlet mw-portlet-dock-bottom emptyPortlet" id="p-dock-bottom">
+	<ul>
+		
+	</ul>
+</div>
+<script>(RLQ=window.RLQ||[]).push(function(){mw.config.set({"wgHostname":"mw-web.eqiad.main-d7b74dd99-kltpk","wgBackendResponseTime":132,"wgPageParseReport":{"limitreport":{"cputime":"0.289","walltime":"1.075","ppvisitednodes":{"value":836,"limit":1000000},"revisionsize":{"value":9735,"limit":2097152},"postexpandincludesize":{"value":22008,"limit":2097152},"templateargumentsize":{"value":655,"limit":2097152},"expansiondepth":{"value":8,"limit":100},"expensivefunctioncount":{"value":1,"limit":500},"unstrip-depth":{"value":0,"limit":20},"unstrip-size":{"value":25261,"limit":5000000},"entityaccesscount":{"value":0,"limit":500},"timingprofile":["100.00%  997.422      1 -total","  4.45%   44.379      1 Template:Short_description","  3.25%   32.397      2 Template:Cite_web","  2.61%   25.995      2 Template:Pagetype","  1.30%   12.968      4 Template:Cite_journal","  1.11%   11.058      5 Template:Main_other","  0.97%    9.637      1 Template:SDcat","  0.69%    6.871      2 Template:Cite_book","  0.52%    5.186      2 Template:Cite_conference","  0.23%    2.270      2 Template:Math"]},"scribunto":{"limitreport-timeusage":{"value":"0.059","limit":"10.000"},"limitreport-memusage":{"value":5097153,"limit":52428800}},"cachereport":{"origin":"mw-web.eqiad.main-579cc7f7f9-zn76j","timestamp":"20260902170646","ttl":2592000,"transientcontent":false,"expiry-source":"Module:Citation/CS1 (os.date(%Y))"}}});});</script>
+<script type="application/ld+json">{"@context":"https:\/\/schema.org","@type":"Article","name":"Okapi BM25","url":"https:\/\/en.wikipedia.org\/wiki\/Okapi_BM25","sameAs":"http:\/\/www.wikidata.org\/entity\/Q2068750","mainEntity":"http:\/\/www.wikidata.org\/entity\/Q2068750","author":{"@type":"Organization","name":"Contributors to Wikimedia projects"},"publisher":{"@type":"Organization","name":"Wikimedia Foundation, Inc.","logo":{"@type":"ImageObject","url":"https:\/\/www.wikimedia.org\/static\/images\/wmf-hor-googpub.png"}},"datePublished":"2007-02-15T00:00:49Z","dateModified":"2026-08-31T04:58:15Z","headline":"ranking function used by search engines"}</script>
+</body>
+</html>
