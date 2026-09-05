@@ -5,7 +5,7 @@
  * memory stays the hot path; disk survives restarts (search pages, fetched
  * article text). Writes are debounced and flushed on a timer + process exit.
  */
-import { mkdirSync, readFileSync, writeFileSync, existsSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync, renameSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
 
@@ -101,14 +101,17 @@ export function createDiskBackedCache(opts: {
 		try {
 			mkdirSync(dir, { recursive: true });
 			const entries = [...map.entries()];
-			const body = JSON.stringify(entries);
+			let body = JSON.stringify(entries);
 			if (body.length > DISK_LIMIT_BYTES) {
 				// over budget: keep the newest half
 				entries.sort((a, b) => b[1].at - a[1].at);
-				writeFileSync(file, JSON.stringify(entries.slice(0, Math.ceil(entries.length / 2))));
-			} else {
-				writeFileSync(file, body);
+				body = JSON.stringify(entries.slice(0, Math.ceil(entries.length / 2)));
 			}
+			// atomic-ish: write to a sibling temp file, rename over the target — a
+			// process killed mid-write leaves the last good snapshot + an orphaned
+			// .tmp that load() never reads
+			writeFileSync(`${file}.tmp`, body);
+			renameSync(`${file}.tmp`, file);
 		} catch {
 			// disk full/readonly — cache silently degrades to memory-only
 		}
@@ -125,17 +128,7 @@ export function createDiskBackedCache(opts: {
 		if (typeof timer === "object" && "unref" in (timer as any)) (timer as any).unref?.();
 	};
 
-	// flush on exit (best effort)
-	process.on("exit", () => flush());
-	try {
-		process.on("SIGINT", () => {
-			flush();
-		});
-	} catch {
-		/* not always available */
-	}
-
-	return {
+	const api = {
 		get(key: string) {
 			load();
 			const hit = map.get(key);
@@ -157,4 +150,37 @@ export function createDiskBackedCache(opts: {
 		},
 		flushSync: flush,
 	};
+	registry.add(api as never);
+	ensureExitHandlers();
+	return api;
+}
+
+// ------------------------------------------------------- exit-handler registry
+
+/**
+ * One process-level pair of exit/SIGINT listeners flushes every live cache —
+ * per-instance listeners (the old shape) hit Node's MaxListenersExceededWarning
+ * after ~10 caches (pi extension reloads).
+ */
+const registry = new Set<{ flushSync: () => void }>();
+let handlersRegistered = false;
+
+function ensureExitHandlers(): void {
+	if (handlersRegistered) return;
+	handlersRegistered = true;
+	const flushAll = () => {
+		for (const c of registry) {
+			try {
+				c.flushSync();
+			} catch {
+				/* best effort */
+			}
+		}
+	};
+	process.on("exit", flushAll);
+	try {
+		process.on("SIGINT", flushAll);
+	} catch {
+		/* not always available */
+	}
 }

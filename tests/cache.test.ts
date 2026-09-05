@@ -65,3 +65,26 @@ test("disk cache: corrupt snapshot file starts fresh, does not throw", () => {
 	c2.set("y", 2); // and still usable
 	assert.equal(c2.get("y"), 2);
 });
+
+test("disk cache: one process-level exit handler for any number of instances", () => {
+	const before = process.listenerCount("exit");
+	const made = Array.from({ length: 5 }, (_, i) =>
+		createDiskBackedCache({ name: `t-listeners-${Date.now()}-${i}`, maxEntries: 4, ttlMs: 60_000 }));
+	// the exit-handler registry means N instances add ZERO extra listeners
+	assert.equal(process.listenerCount("exit"), before);
+});
+
+test("disk cache: flush is atomic via .tmp rename (no orphan, load ignores .tmp)", async () => {
+	const { readdirSync, existsSync, writeFileSync } = await import("node:fs");
+	const name = `t-atomic-${Date.now()}`;
+	const c = createDiskBackedCache({ name, maxEntries: 4, ttlMs: 60_000 });
+	c.set("gk", "gv");
+	c.flushSync();
+	const file = join(homedir(), ".pi", "agent", "cache", "webfind", `${name}.json`);
+	assert.ok(existsSync(file), "flushed file exists");
+	assert.ok(!existsSync(`${file}.tmp`), "no .tmp orphan after rename");
+	// a stale/garbage .tmp is never read by a fresh instance
+	writeFileSync(`${file}.tmp`, "GARBAGE");
+	const c2 = createDiskBackedCache({ name, maxEntries: 4, ttlMs: 60_000 });
+	assert.equal(c2.get("gk"), "gv"); // last good value survives the orphaned .tmp
+});
