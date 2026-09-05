@@ -20,7 +20,7 @@ jobs:
           node-version: 22
           cache: npm
       - name: Typecheck
-        run: npx -y typescript@5.9 tsc --noEmit
+        run: npx -y typescript@5.9.3 tsc --noEmit
       - name: Tests (offline, mocked fetch)
         run: node --test tests/*.test.ts
       - name: Tarball sanity (files allowlist)
