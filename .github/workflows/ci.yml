@@ -19,6 +19,11 @@ jobs:
         with:
           node-version: 22
           cache: npm
+      # npm 10 cannot resolve the bin for a range/exact spec with a two-bin manifest
+      # (typescript ships tsc + tsserver): "could not determine executable to run".
+      # npm 11 fixed the resolution — upgrade before any npx usage.
+      - name: npm >= 11 (npx bin resolution for multi-bin packages)
+        run: npm install -g npm@11
       - name: Typecheck
         run: npx -y typescript@5.9.3 tsc --noEmit
       - name: Tests (offline, mocked fetch)
