@@ -538,3 +538,99 @@ function findFirst(node: Node, pred: (n: Node) => boolean): Node | null {
 	}
 	return null;
 }
+
+// ------------------------------------------------------------------ dates
+
+function attrValue(tag: string, name: string): string | undefined {
+	const m = tag.match(new RegExp(`\\b${name}\\s*=\\s*("([^"]*)"|'([^']*)')`, "i"));
+	return m ? (m[2] ?? m[3]) : undefined;
+}
+
+const toIsoDate = (raw?: string): string | undefined => {
+	if (!raw) return undefined;
+	const s = raw.trim();
+	// date-only strings (2025-05-12, 2025/05/12) carry no time zone — use them
+	// as-is instead of shifting through a local-midnight Date
+	const dateOnly = s.match(/^(20\d{2})[-/](\d{1,2})[-/](\d{1,2})$/);
+	if (dateOnly) {
+		return `${dateOnly[1]}-${dateOnly[2]!.padStart(2, "0")}-${dateOnly[3]!.padStart(2, "0")}`;
+	}
+	const ts = Date.parse(s);
+	return Number.isNaN(ts) ? undefined : new Date(ts).toISOString().slice(0, 10);
+};
+
+function jsonLdDate(json: string): string | undefined {
+	try {
+		const data = JSON.parse(json);
+		for (const n of Array.isArray(data) ? data : (data["@graph"] ?? [data])) {
+			const iso = toIsoDate(n?.datePublished) ?? toIsoDate(n?.dateModified);
+			if (iso) return iso;
+		}
+	} catch {
+		/* malformed JSON-LD is common; ignore */
+	}
+	return undefined;
+}
+
+/**
+ * Best-effort page publication date (YYYY-MM-DD). Priority:
+ * article:published_time / og:updated_time → JSON-LD datePublished/dateModified
+ * → <time datetime> → date/dc.date/pubdate metas → /2026/08/10/ URL path.
+ */
+export function extractDate(html: string, pageUrl: string): string | undefined {
+	const metas = new Map<string, string>();
+	for (const tag of html.match(/<meta\b[^>]*>/gi) ?? []) {
+		const key = (attrValue(tag, "property") ?? attrValue(tag, "name"))?.toLowerCase();
+		const content = attrValue(tag, "content");
+		if (key && content && !metas.has(key)) metas.set(key, content);
+	}
+	for (const k of ["article:published_time", "og:updated_time"]) {
+		const iso = toIsoDate(metas.get(k));
+		if (iso) return iso;
+	}
+	for (const m of html.matchAll(/<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi)) {
+		const iso = jsonLdDate(m[1]!);
+		if (iso) return iso;
+	}
+	const timeIso = toIsoDate(html.match(/<time\b[^>]*\bdatetime\s*=\s*["']([^"']+)["']/i)?.[1]);
+	if (timeIso) return timeIso;
+	for (const k of ["date", "dc.date", "pubdate"]) {
+		const iso = toIsoDate(metas.get(k));
+		if (iso) return iso;
+	}
+	const path = pageUrl.match(/\/(20\d{2})\/(\d{2})\/(\d{2})(?:\/|$)/);
+	if (path) return `${path[1]}-${path[2]}-${path[3]}`;
+	// citation_date / citation_publication_date (arxiv, journals, CMS blogs)
+	for (const k of ["citation_publication_date", "citation_date"]) {
+		const iso = toIsoDate(metas.get(k));
+		if (iso) return iso;
+	}
+	// plain-text stamps: "[Submitted on 12 Jun 2017" (day-first) and
+	// "Published March 3, 2025" (US month-first)
+	const MONTHS: Record<string, string> = {
+		jan: "01", feb: "02", mar: "03", apr: "04", may: "05", jun: "06",
+		jul: "07", aug: "08", sep: "09", oct: "10", nov: "11", dec: "12",
+	};
+	const dayFirst = html.match(/(?:Submitted on|Published on|posted on)\s+(\d{1,2})\s+(\w{3,9})\.?,?\s+(20\d{2})/i);
+	if (dayFirst) {
+		const mo = MONTHS[dayFirst[2]!.slice(0, 3).toLowerCase()];
+		if (mo) return `${dayFirst[3]}-${mo}-${dayFirst[1]!.padStart(2, "0")}`;
+	}
+	const usFirst = html.match(/(?:Submitted on|Published on|Published|posted on)\s+(\w{3,9})\.?\s+(\d{1,2}),?\s+(20\d{2})/i);
+	if (usFirst) {
+		const mo = MONTHS[usFirst[1]!.slice(0, 3).toLowerCase()];
+		if (mo) return `${usFirst[3]}-${mo}-${usFirst[2]!.padStart(2, "0")}`;
+	}
+	// bare "Apr 24, 2024" — either in the page-header zone (first 3000 chars) or in
+	// a structural metadata element (dt/dd "Last Updated"/"Published")
+	const metadata = html.match(/(?:Last [Uu]pdated|[Dd]ate|[Pp]ublished)<\/dt>\s*<dd>\s*(\w{3})\s+(\d{1,2}),\s+(20\d{2})/);
+	if (metadata && MONTHS[metadata[1]!.toLowerCase()]) {
+		return `${metadata[3]}-${MONTHS[metadata[1]!.toLowerCase()]}-${metadata[2]!.padStart(2, "0")}`;
+	}
+	const head = html.slice(0, 3000);
+	const bare = head.match(/\b(\w{3})\s+(\d{1,2}),\s+(20\d{2})\b/);
+	if (bare && MONTHS[bare[1]!.toLowerCase()]) {
+		return `${bare[3]}-${MONTHS[bare[1]!.toLowerCase()]}-${bare[2]!.padStart(2, "0")}`;
+	}
+	return undefined;
+}

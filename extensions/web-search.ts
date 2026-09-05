@@ -380,6 +380,7 @@ export default function (pi: ExtensionAPI) {
 								if (first && first.trim().length > 80) {
 									(r as Row).excerpt = clip(first.trim().replace(/\n+/g, " "), 500);
 								}
+								if (page.date) (r as Row).date = page.date;
 							} catch {
 								/* ship without excerpt */
 							}
@@ -493,6 +494,7 @@ export default function (pi: ExtensionAPI) {
 					`HTTP ${r.status}`,
 					r.source !== "direct" ? `via ${r.source}` : null,
 					r.source === "wayback" && r.waybackDate ? r.waybackDate : null,
+					r.date ?? null,
 					typeof r.offset === "number" && r.totalChars !== undefined
 						? `${r.offset}\u2013${r.offset + r.text.length} of ${r.totalChars}`
 						: null,
@@ -508,6 +510,7 @@ export default function (pi: ExtensionAPI) {
 						chars: r.text.length,
 						totalChars: r.totalChars,
 						offset: r.offset,
+						date: r.date,
 						truncated: r.truncated,
 						notes: r.notes,
 						host: u.host,
@@ -530,6 +533,7 @@ export default function (pi: ExtensionAPI) {
 				const line1 = `Read ${d.chars ?? 0} chars in ${secs(d.durationMs ?? 0)}`;
 				const bits = [`HTTP ${d.status ?? "?"}`];
 				if (d.source && d.source !== "direct") bits.push(`via ${d.source}`);
+				if (d.date) bits.push(d.date);
 				if (typeof d.offset === "number" && d.totalChars) bits.push(`${d.offset}\u2013${(d.offset ?? 0) + (d.chars ?? 0)} of ${d.totalChars}`);
 				if (d.fromCache) bits.push("cached");
 				if (d.truncated) bits.push("truncated");

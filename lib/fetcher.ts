@@ -4,9 +4,9 @@
  */
 import { createDiskBackedCache } from "./cache.ts";
 import { htmlToText } from "./engine.ts";
-import { htmlToMarkdown } from "./extract.ts";
+import { extractDate, htmlToMarkdown } from "./extract.ts";
 import { topPassages, type PickedPassage } from "./rank.ts";
-import { extractPdf, extractPdfViaPoppler } from "./pdf.ts";
+import { extractPdf } from "./pdf.ts";
 import { assertSafeUrl, resolveSafe } from "./safe.ts";
 import { assertOnline, hostCooldownUntil, jinaGap, markOnline, noteNotFound, setHostCooldown } from "./net.ts";
 
@@ -66,6 +66,8 @@ export interface FetchResult {
 	waybackDate?: string;
 	truncated: boolean;
 	fromCache: boolean;
+	/** publication date (YYYY-MM-DD) from meta/JSON-LD/<time>/URL path, when found */
+	date?: string;
 	/** extracted chars before any slicing (≤ EXTRACT_CAP); set on the head view */
 	totalChars?: number;
 	/** start offset of `text` within the extracted document (head view) */
@@ -283,7 +285,7 @@ async function waybackFetch(
 		// headers: undefined — custom headers (Authorization etc.) never reach archive.org
 		const { res: sres, bodyText, bytes: bytes2 } = await rawFetch(snapUrl, { ...opts, headers: undefined });
 		if (!sres.ok) return null;
-		const { text } = extract(snapUrl, sres.headers.get("content-type") ?? "", bodyText, { ...opts, maxChars: EXTRACT_CAP }, bytes2, Number(sres.headers.get("content-length") ?? 0));
+		const { text } = await extract(snapUrl, sres.headers.get("content-type") ?? "", bodyText, { ...opts, maxChars: EXTRACT_CAP }, bytes2, Number(sres.headers.get("content-length") ?? 0));
 		return {
 			text,
 			status: 200,
@@ -301,27 +303,25 @@ async function waybackFetch(
 }
 
 const BINARY_TYPES = /^(image\/|video\/|audio\/|application\/(zip|gzip|x-tar|pdf|octet-stream|wasm|sqlite))/;
-function extract(
+async function extract(
 	url: URL,
 	contentType: string,
 	body: string,
 	opts: FetchOptions,
 	bytes?: Buffer,
 	contentLength?: number,
-): { text: string; truncated: boolean } {
+): Promise<{ text: string; truncated: boolean; date?: string }> {
 	const ct = contentType.split(";")[0].trim().toLowerCase();
 
 	// PDF → text extraction (poppler if installed, else internal parser)
 	if (bytes && (ct === "application/pdf" || /\.pdf($|\?)/i.test(url.pathname))) {
 		try {
-			const pdfText = extractPdfSync(bytes);
-			if (pdfText) {
-				const collapsed = pdfText.replace(/\n{3,}/g, "\n\n");
-				return { text: collapsed.slice(0, opts.maxChars), truncated: collapsed.length > opts.maxChars };
-			}
-		} catch {
+			const pdfText = await extractPdf(bytes);
+			const collapsed = pdfText.replace(/\n{3,}/g, "\n\n");
+			return { text: collapsed.slice(0, opts.maxChars), truncated: collapsed.length > opts.maxChars };
+		} catch (err) {
 			return {
-				text: `[PDF detected (${bytes.length} bytes) but text extraction failed — likely scanned/image-only or encrypted]`,
+				text: `[PDF detected (${bytes.length} bytes) but text extraction failed: ${(err as Error).message}]`,
 				truncated: false,
 			};
 		}
@@ -354,28 +354,32 @@ function extract(
 
 	// HTML → readable text
 	const format = opts.format ?? "markdown";
+	const date = extractDate(body, url.href);
 	if (format === "markdown") {
 		try {
 			const md = htmlToMarkdown(body, url.href, opts.maxChars);
-			if (md.text) return md; // junk check inside; fall through on failure
+			if (md.text) return { ...md, date }; // junk check inside; fall through on failure
 		} catch {
 			/* fall through to flattener */
 		}
 	}
 	const { text, truncated } = htmlToText(body, opts.maxChars);
+	const withDate = { date };
 	if (text.length < 200 && body.length > 5000 && /<app-root|<div id="root"|<div id="app"|ng-app|data-reactroot|__NEXT_DATA__|window\.__INITIAL_STATE__|shreddit|<web-app/i.test(body)) {
 		return {
 			text: text + "\n\n[page appears to be a client-rendered SPA — little static text available]",
 			truncated,
+			...withDate,
 		};
 	}
 	if (text.length < 200 && body.length > 20000) {
 		return {
 			text: text + "\n\n[very little readable text extracted from a large page — likely JS-rendered or bot-walled; try the Wayback fallback with no_wayback=false, or a different URL]",
 			truncated,
+			...withDate,
 		};
 	}
-	return { text, truncated };
+	return { text, truncated, ...withDate };
 }
 
 // ------------------------------------------------------------------- main
@@ -435,6 +439,7 @@ interface Extracted {
 	notes?: string[];
 	truncated?: boolean;
 	fromCache?: boolean;
+	date?: string;
 	at: number;
 }
 
@@ -472,6 +477,7 @@ export async function smartFetch(url: string, opts: FetchOptions): Promise<Fetch
 		contentType: extracted.contentType,
 		source: extracted.source,
 		...(extracted.waybackDate ? { waybackDate: extracted.waybackDate } : {}),
+		...(extracted.date ? { date: extracted.date } : {}),
 		notes: extracted.notes,
 		truncated: false,
 		fromCache: extracted.fromCache === true,
@@ -531,6 +537,7 @@ async function smartFetchRaw(url: string, opts: FetchOptions): Promise<Extracted
 				source: ad.source as any,
 				truncated: false,
 				fromCache: false,
+				...(ad.date ? { date: ad.date } : {}),
 				at: Date.now(),
 			};
 			FETCH_CACHE.set(cacheKey, out);
@@ -569,7 +576,7 @@ async function smartFetchRaw(url: string, opts: FetchOptions): Promise<Extracted
 			if (hops > 0) notes.push(`redirected ${hops}×`);
 			if (res.ok) {
 				const ctHeader = res.headers.get("content-type") ?? "";
-				const { text } = extract(safeUrl, ctHeader, bodyText, inner, bytes, Number(res.headers.get("content-length") ?? 0));
+				const { text, date } = await extract(safeUrl, ctHeader, bodyText, inner, bytes, Number(res.headers.get("content-length") ?? 0));
 				// Thin HTML (SPA/bot-wall that 200s) → jina for real rendered text
 				const looksThin = ctHeader.includes("html") && text.replace(/\s+/g, " ").trim().length < 400 && !opts.raw;
 				if (looksThin && remaining() > 5_500) {
@@ -581,7 +588,7 @@ async function smartFetchRaw(url: string, opts: FetchOptions): Promise<Extracted
 						return store(cacheKey, jina, safeUrl);
 					}
 				}
-				const out: Extracted = { text, status: res.status, finalUrl, contentType: ctHeader, source: "direct", truncated: false, fromCache: false, notes, at: Date.now() };
+				const out: Extracted = { text, status: res.status, finalUrl, contentType: ctHeader, source: "direct", truncated: false, fromCache: false, notes, date, at: Date.now() };
 				return store(cacheKey, out, safeUrl, finalUrl);
 			}
 			const cls = classify(res.status);
@@ -596,7 +603,7 @@ async function smartFetchRaw(url: string, opts: FetchOptions): Promise<Extracted
 				if (wb) return store(cacheKey, wb, safeUrl);
 			}
 			if (opts.allowHttpErrors) {
-				const { text } = extract(safeUrl, res.headers.get("content-type") ?? "", bodyText, inner, bytes);
+				const { text } = await extract(safeUrl, res.headers.get("content-type") ?? "", bodyText, inner, bytes);
 				return { text, status: res.status, finalUrl, contentType: res.headers.get("content-type") ?? "", source: "direct", truncated: false, fromCache: false, notes, at: Date.now() };
 			}
 			if (cls === "auth") {
@@ -654,66 +661,3 @@ function store(key: string, ex: Extracted, safeUrl: URL, finalUrl?: string): Ext
 }
 
 export { decodeEntities };
-
-/** Sync wrapper: run the async extractor synchronously via spawnSync for poppler, zlib for internal. */
-import { spawnSync } from "node:child_process";
-import { inflateSync as _is, inflateRawSync as _irs } from "node:zlib";
-
-function extractPdfSync(bytes: Buffer): string | null {
-	// poppler first (installed on this machine)
-	const pdftotext = spawnSync("pdftotext", ["-", "-"], { input: bytes, maxBuffer: 20 * 1024 * 1024, timeout: 20_000 });
-	if (pdftotext.status === 0 && pdftotext.stdout && pdftotext.stdout.toString().trim().length > 0) {
-		return pdftotext.stdout.toString();
-	}
-	// internal: inflate FlateDecode streams + parse text operators (sync zlib)
-	try {
-		const streams = findStreamsInternal(bytes);
-		const chunks: string[] = [];
-		for (const st of streams) {
-			if (/\/Filter\s*\[^\]]*FlateDecode/i.test(st.dict) || /\/Filter\s*\/Fl\b/i.test(st.dict)) {
-				try {
-					chunks.push(_is(bytes.subarray(st.start, st.end)).toString("latin1"));
-				} catch {
-					try { chunks.push(_irs(bytes.subarray(st.start, st.end)).toString("latin1")); } catch { /* skip */ }
-				}
-			} else if (!/\/Filter/.test(st.dict)) {
-				chunks.push(bytes.subarray(st.start, st.end).toString("latin1"));
-			}
-		}
-		if (chunks.length === 0) return null;
-		// reuse operator parser from pdf.ts via dynamic import is async; inline a simple regex pass:
-		const all = chunks.join("\n");
-		const lines: string[] = [];
-		for (const m of all.matchAll(/\((?:\\.|[^\\()])*\)\s*Tj|\[(?:[^\][]|\\.)*\]\s*TJ/g)) {
-			for (const sm of m[0].matchAll(/\((?:\\.|[^\\()])*\)/g)) {
-				lines.push(sm[0].slice(1, -1).replace(/\\([nrtbf])/g, (_x, c) => ({ n: "\n", r: "\r", t: "\t", b: "\b", f: "\f" } as Record<string, string>)[c] ?? c).replace(/\\([0-7]{1,3})/g, (_x, o) => String.fromCharCode(parseInt(o, 8))).replace(/\\(.)/g, "$1"));
-			}
-		}
-		if (lines.length === 0) return null;
-		return lines.join("\n").replace(/\n{3,}/g, "\n\n").trim();
-	} catch {
-		return null;
-	}
-}
-
-function findStreamsInternal(data: Buffer): Array<{ dict: string; start: number; end: number }> {
-	const streams: Array<{ dict: string; start: number; end: number }> = [];
-	const latin = data.toString("latin1");
-	let pos = 0;
-	while (true) {
-		const s = latin.indexOf("stream", pos);
-		if (s === -1) break;
-		if ((s === 0 || !/[a-zA-Z]/.test(latin[s - 1])) && !latin.startsWith("endstream", s)) {
-			const dictStart = latin.lastIndexOf("<<", s);
-			const dict = dictStart >= 0 ? latin.slice(Math.max(dictStart, s - 600), s) : "";
-			let body = s + 6;
-			if (latin[body] === "\r") body++;
-			if (latin[body] === "\n") body++;
-			const e = latin.indexOf("endstream", body);
-			if (e === -1) break;
-			streams.push({ dict, start: body, end: e });
-			pos = e + 9;
-		} else pos = s + 6;
-	}
-	return streams;
-}

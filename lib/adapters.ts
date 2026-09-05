@@ -25,6 +25,8 @@ async function getText(url: string, signal?: AbortSignal, headers?: Record<strin
 export interface AdapterResult {
 	text: string;
 	source: string; // e.g. "github-api"
+	/** publication date (YYYY-MM-DD) when the API provides one */
+	date?: string;
 }
 
 type Adapter = (url: URL, signal?: AbortSignal) => Promise<AdapterResult | null>;
@@ -360,7 +362,7 @@ async function runArxiv(m: AdapterMatch, _url: URL, signal?: AbortSignal): Promi
 	const md = `# ${title}\n\n${authors.join(", ")}\n\nPublished ${published ?? "?"}` +
 		(updated && updated !== published ? ` · updated ${updated}` : "") +
 		`\n\n## Abstract\n\n${summary}\n\n[PDF](https://arxiv.org/pdf/${id})\n`;
-	return { text: md.slice(0, 60_000), source: "arxiv-api" };
+	return { text: md.slice(0, 60_000), source: "arxiv-api", date: published };
 }
 
 // ------------------------------------------------------------------ router
