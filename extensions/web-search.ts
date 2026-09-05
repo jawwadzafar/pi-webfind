@@ -278,6 +278,7 @@ export default function (pi: ExtensionAPI) {
 			query: Type.String({ description: "Search query" }),
 			max_results: Type.Optional(Type.Number({ description: "Max results, 1-20 (default 8)" })),
 			recency: Type.Optional(Type.String({ description: "d=day, w=week, m=month, y=year (optional)" })),
+			lang: Type.Optional(Type.String({ description: "BCP-47 language-region, e.g. 'es-ES', 'ja-JP'. Biases results to that locale." })),
 			engine: Type.Optional(Type.String({ description: "auto (default: ddg+bing race) | ddg | brave | bing | multi (all in parallel)" })),
 			refresh: Type.Optional(Type.Boolean({ description: "Skip the 10-minute cache" })),
 			deep: Type.Optional(
@@ -295,7 +296,8 @@ export default function (pi: ExtensionAPI) {
 				: undefined;
 			const engine = params.engine ?? "auto";
 			const deepN = params.deep === true ? 4 : typeof params.deep === "number" ? Math.min(Math.max(Math.round(params.deep), 1), 8) : 0;
-			const cacheKey = `s:${engine}:${recency ?? ""}:${maxResults}:${params.query}:deep${deepN}`;
+			const lang = typeof params.lang === "string" && /^[a-z]{2}(-[A-Za-z]{2,4})?$/.test(params.lang.trim()) ? params.lang.trim() : undefined;
+			const cacheKey = `s:${engine}:${recency ?? ""}:${lang ?? ""}:${maxResults}:${params.query}:deep${deepN}`;
 			const run = async (): Promise<SearchOutcome> => {
 				if (engine === "multi" || engine === "auto") {
 					onUpdate?.({
@@ -303,24 +305,24 @@ export default function (pi: ExtensionAPI) {
 						details: { step: engine === "multi" ? "querying ddg + brave + bing in parallel…" : "querying ddg + bing…" },
 					});
 					const r = engine === "multi"
-						? await multiSearch(params.query, maxResults, recency, signal)
-						: await searchRace(params.query, maxResults, recency, signal);
+						? await multiSearch(params.query, maxResults, recency, signal, lang)
+						: await searchRace(params.query, maxResults, recency, signal, lang);
 					return r;
 				}
 				if (engine === "brave") {
 					onUpdate?.({ content: [{ type: "text", text: "…" }], details: { step: "querying brave…" } });
-					const rows = await braveSearch(params.query, maxResults, recency, signal);
+					const rows = await braveSearch(params.query, maxResults, recency, signal, lang);
 					const kept = relevanceGate(params.query, rows) as Row[];
 					return { results: kept as unknown as SearchResult[], engines: ["brave"], errors: [], stats: { brave: { got: rows.length, kept: kept.length } } };
 				}
 				if (engine === "bing") {
 					onUpdate?.({ content: [{ type: "text", text: "…" }], details: { step: "querying bing rss…" } });
-					const rows = await bingRssSearch(params.query, maxResults, recency, signal);
+					const rows = await bingRssSearch(params.query, maxResults, recency, signal, lang);
 					const kept = relevanceGate(params.query, rows) as Row[];
 					return { results: kept as unknown as SearchResult[], engines: ["bing"], errors: [], stats: { bing: { got: rows.length, kept: kept.length } } };
 				}
 				onUpdate?.({ content: [{ type: "text", text: "…" }], details: { step: "querying duckduckgo…" } });
-				const rows = await ddgSearch(params.query, maxResults, recency, signal);
+				const rows = await ddgSearch(params.query, maxResults, recency, signal, lang);
 				const kept = relevanceGate(params.query, rows) as Row[];
 				return { results: kept as unknown as SearchResult[], engines: ["ddg"], errors: [], stats: { ddg: { got: rows.length, kept: kept.length } } };
 			};

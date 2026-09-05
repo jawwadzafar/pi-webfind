@@ -96,7 +96,27 @@ function unwrapRedirect(href: string): string | null {
 	return null;
 }
 
-async function get(url: string, signal?: AbortSignal, post?: string): Promise<string> {
+// ------------------------------------------------------- locale mapping
+
+/** DDG `kl=` codes are country-language and don't follow one formula — table + fallback. */
+const DDG_KL: Record<string, string> = {
+	"es-ES": "es-es", "de-DE": "de-de", "fr-FR": "fr-fr", "it-IT": "it-it", "pt-PT": "pt-pt",
+	"pt-BR": "br-pt", "ja-JP": "jp-jp", "ko-KR": "kr-kr", "ru-RU": "ru-ru", "nl-NL": "nl-nl",
+	"en-US": "us-en", "en-GB": "uk-en", "en-AU": "au-en", "en-CA": "ca-en",
+};
+export function toDdgKl(lang: string): string {
+	if (DDG_KL[lang]) return DDG_KL[lang];
+	const [language, region] = lang.split("-");
+	return region ? `${region.toLowerCase()}-${language.toLowerCase()}` : `${language}-${language}`; // approximation
+}
+export const toBraveCountry = (lang: string) => (lang.split("-")[1] ?? lang).toUpperCase();
+export const toBingMkt = (lang: string): string => {
+	const [language, region] = lang.split("-");
+	return region ? `${language.toLowerCase()}-${region.toUpperCase()}` : lang;
+};
+export const toAcceptLanguage = (lang: string): string => `${lang},${lang.split("-")[0]};q=0.9,en;q=0.5`;
+
+async function get(url: string, signal?: AbortSignal, post?: string, acceptLanguage?: string): Promise<string> {
 	const host = new URL(url).host;
 	await throttle(host, signal);
 	const timeout = AbortSignal.timeout(TIMEOUT_MS);
@@ -106,7 +126,7 @@ async function get(url: string, signal?: AbortSignal, post?: string): Promise<st
 		headers: {
 			"User-Agent": UA,
 			Accept: "text/html,application/xhtml+xml",
-			"Accept-Language": "en-US,en;q=0.9",
+			"Accept-Language": acceptLanguage ?? "en-US,en;q=0.9",
 			...(post ? { "Content-Type": "application/x-www-form-urlencoded" } : {}),
 		},
 		body: post,
@@ -267,9 +287,11 @@ export function parseJinaDdg(md: string): SearchResult[] { // exported for tests
 }
 
 /** DDG without the jina relay: html GET → lite GET → html POST. */
-async function ddgDirect(query: string, maxResults: number, recency: Recency, signal?: AbortSignal): Promise<SearchResult[]> {
+async function ddgDirect(query: string, maxResults: number, recency: Recency, signal?: AbortSignal, lang?: string): Promise<SearchResult[]> {
 	const params = new URLSearchParams({ q: query });
 	if (recency) params.set("df", recency);
+	if (lang) params.set("kl", toDdgKl(lang));
+	const al = lang ? toAcceptLanguage(lang) : undefined;
 	const enc = params.toString();
 
 	// 1. html GET — a challenge wall (202/403) means this IP is flagged: the POST
@@ -277,7 +299,7 @@ async function ddgDirect(query: string, maxResults: number, recency: Recency, si
 	// same wall from the same IP, so give up at once and let jina's IP pool try.
 	let softEmpty = false;
 	try {
-		const page = await get(`https://html.duckduckgo.com/html/?${enc}`, signal);
+		const page = await get(`https://html.duckduckgo.com/html/?${enc}`, signal, undefined, al);
 		const results = parseDdgHtml(page);
 		if (results.length > 0) return results.slice(0, maxResults);
 		softEmpty = true; // 200 but zero rows — bot-wall serving empty markup
@@ -292,7 +314,7 @@ async function ddgDirect(query: string, maxResults: number, recency: Recency, si
 	// 2. lite GET (cheap retry on transient network errors — a challenge wall never
 	// reaches this point; that case threw above)
 	try {
-		const results = parseDdgLite(await get(`https://lite.duckduckgo.com/lite/?${enc}`, signal));
+		const results = parseDdgLite(await get(`https://lite.duckduckgo.com/lite/?${enc}`, signal, undefined, al));
 		if (results.length > 0) return results.slice(0, maxResults);
 	} catch {
 		/* try next */
@@ -301,7 +323,7 @@ async function ddgDirect(query: string, maxResults: number, recency: Recency, si
 	// 3. html POST (often bypasses soft GET blocks)
 	if (softEmpty) {
 		try {
-			const results = parseDdgHtml(await get("https://html.duckduckgo.com/html/", signal, enc));
+			const results = parseDdgHtml(await get("https://html.duckduckgo.com/html/", signal, enc, al));
 			if (results.length > 0) return results.slice(0, maxResults);
 		} catch {
 			/* fall to jina */
@@ -311,9 +333,10 @@ async function ddgDirect(query: string, maxResults: number, recency: Recency, si
 }
 
 /** DDG via the jina relay (different IP pool): html first, then lite. */
-async function ddgJina(query: string, maxResults: number, recency: Recency, signal?: AbortSignal): Promise<SearchResult[]> {
+async function ddgJina(query: string, maxResults: number, recency: Recency, signal?: AbortSignal, lang?: string): Promise<SearchResult[]> {
 	const params = new URLSearchParams({ q: query });
 	if (recency) params.set("df", recency);
+	if (lang) params.set("kl", toDdgKl(lang)); // baked into the relayed URL
 	const enc = params.toString();
 	try {
 		const results = parseJinaDdg(await jinaGet(`https://html.duckduckgo.com/html/?${enc}`, signal));
@@ -334,11 +357,12 @@ export async function ddgSearch(
 	maxResults: number,
 	recency: Recency,
 	signal?: AbortSignal,
+	lang?: string,
 ): Promise<SearchResult[]> {
 	try {
-		return await ddgDirect(query, maxResults, recency, signal);
+		return await ddgDirect(query, maxResults, recency, signal, lang);
 	} catch {
-		return ddgJina(query, maxResults, recency, signal);
+		return ddgJina(query, maxResults, recency, signal, lang);
 	}
 }
 
@@ -347,6 +371,7 @@ export async function braveSearch(
 	maxResults: number,
 	recency: Recency,
 	signal?: AbortSignal,
+	lang?: string,
 ): Promise<SearchResult[]> {
 	const cooldown = hostCooldownUntil("search.brave.com");
 	if (cooldown > Date.now()) {
@@ -357,6 +382,7 @@ export async function braveSearch(
 		const map: Record<string, string> = { d: "pd", w: "pw", m: "pm", y: "py" };
 		params.set("tf", map[recency]);
 	}
+	if (lang) params.set("country", toBraveCountry(lang));
 	let page: string;
 	try {
 		page = await get(`https://search.brave.com/search?${params}`, signal);
@@ -400,13 +426,14 @@ export async function bingRssSearch(
 	maxResults: number,
 	recency: Recency,
 	signal?: AbortSignal,
+	lang?: string,
 ): Promise<SearchResult[]> {
 	const params = new URLSearchParams({
 		q: query,
 		format: "rss",
 		count: String(Math.max(maxResults, 15)),
-		setmkt: "en-US",
-		setlang: "en",
+		setmkt: lang ? toBingMkt(lang) : "en-US",
+		setlang: lang ? (lang.split("-")[0] ?? "en") : "en",
 	});
 	if (recency) params.set("qdr", recency); // bing supports freshness via qdr on html; harmless on rss
 	const xml = await get(`https://www.bing.com/search?${params}`, signal);
@@ -536,6 +563,7 @@ export async function searchRace(
 	maxResults: number,
 	recency: Recency,
 	signal?: AbortSignal,
+	lang?: string,
 ): Promise<SearchOutcome> {
 	const stats: SearchOutcome["stats"] = {};
 	const errors: string[] = [];
@@ -551,16 +579,16 @@ export async function searchRace(
 				errors.push(`${name}: ${(e as Error)?.message ?? e}`);
 			},
 		);
-	const ddg = leg("ddg", ddgDirect(query, 15, recency, signal));
-	const bing = leg("bing", bingRssSearch(query, 15, recency, signal));
+	const ddg = leg("ddg", ddgDirect(query, 15, recency, signal, lang));
+	const bing = leg("bing", bingRssSearch(query, 15, recency, signal, lang));
 	await Promise.race([ddg, bing]);
 	if (buckets.some((b) => b.rows.length >= 5)) await Promise.race([Promise.all([ddg, bing]), sleep(300, signal)]);
 	else await Promise.all([ddg, bing]);
 	const challenged = errors.some((e) => e.startsWith("ddg: ddg challenge"));
 	if (buckets.length === 0 && !challenged && hostCooldownUntil("search.brave.com") <= Date.now()) {
-		await leg("brave", braveSearch(query, 15, recency, signal));
+		await leg("brave", braveSearch(query, 15, recency, signal, lang));
 	}
-	if (buckets.length === 0) await leg("ddg-jina", ddgJina(query, 15, recency, signal));
+	if (buckets.length === 0) await leg("ddg-jina", ddgJina(query, 15, recency, signal, lang));
 	return { results: fuse(buckets, maxResults), engines: buckets.map((b) => b.name), errors, stats };
 }
 
@@ -570,11 +598,12 @@ export async function multiSearch(
 	maxResults: number,
 	recency: Recency,
 	signal?: AbortSignal,
+	lang?: string,
 ): Promise<SearchOutcome> {
 	const attempts: Array<{ name: string; fn: () => Promise<SearchResult[]> }> = [
-		{ name: "ddg", fn: () => ddgSearch(query, 15, recency, signal) },
-		{ name: "brave", fn: () => braveSearch(query, 15, recency, signal) },
-		{ name: "bing", fn: () => bingRssSearch(query, 15, recency, signal) },
+		{ name: "ddg", fn: () => ddgSearch(query, 15, recency, signal, lang) },
+		{ name: "brave", fn: () => braveSearch(query, 15, recency, signal, lang) },
+		{ name: "bing", fn: () => bingRssSearch(query, 15, recency, signal, lang) },
 	];
 	const settled = await Promise.allSettled(attempts.map((a) => a.fn()));
 	const namedBuckets: Array<{ name: string; rows: SearchResult[] }> = [];
