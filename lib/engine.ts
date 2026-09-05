@@ -15,8 +15,60 @@ import { createDiskBackedCache } from "./cache.ts";
 import { hostCooldownUntil, setHostCooldown, jinaAuth } from "./net.ts";
 import { tokenize } from "./rank.ts";
 
-const UA =
-	"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
+// ------------------------------------------------------- anti-block hygiene
+
+const USER_AGENTS = [
+	"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+	"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+	"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15",
+	"Mozilla/5.0 (X11; Linux x86_64; rv:125.0) Gecko/20100101 Firefox/125.0",
+];
+const uaByHost = new Map<string, string>();
+/** Sticky per-host UA: one pick per host for the process lifetime (consistent fingerprint). */
+export function pickUA(host: string): string {
+	let ua = uaByHost.get(host);
+	if (!ua) {
+		ua = USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)]!;
+		uaByHost.set(host, ua);
+	}
+	return ua;
+}
+
+/** Name/value-only cookie jar (session-scoped preference cookies; no RFC 6265 semantics). */
+const cookieJar = new Map<string, Map<string, string>>();
+export const cookieHeaderFor = (host: string): string | undefined => {
+	const jar = cookieJar.get(host);
+	return jar && jar.size > 0 ? [...jar].map(([k, v]) => `${k}=${v}`).join("; ") : undefined;
+};
+export function storeCookies(host: string, res: Response): void {
+	const set = typeof res.headers.getSetCookie === "function" ? res.headers.getSetCookie() : [];
+	if (set.length === 0) return;
+	const jar = cookieJar.get(host) ?? new Map<string, string>();
+	for (const sc of set) {
+		const eq = sc.indexOf("=");
+		const semi = sc.indexOf(";");
+		if (eq > 0) jar.set(sc.slice(0, eq).trim(), sc.slice(eq + 1, semi > eq ? semi : undefined).trim());
+	}
+	cookieJar.set(host, jar);
+}
+
+export function browserHeaders(host: string, opts: { acceptLanguage?: string; accept?: string } = {}): Record<string, string> {
+	const h: Record<string, string> = {
+		"User-Agent": pickUA(host),
+		Accept: opts.accept ?? "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+		"Accept-Language": opts.acceptLanguage ?? "en-US,en;q=0.9",
+		"Sec-Fetch-Dest": "document",
+		"Sec-Fetch-Mode": "navigate",
+		"Sec-Fetch-Site": "none",
+		"Sec-Fetch-User": "?1",
+		"Upgrade-Insecure-Requests": "1",
+	};
+	const cookie = cookieHeaderFor(host);
+	if (cookie) h["Cookie"] = cookie;
+	return h;
+}
+
+const UA = USER_AGENTS[0]!;
 // r.jina.ai blocks fake browser UAs but allows honest tool UAs (opposite of most sites)
 import { TOOL_UA } from "./version.ts";
 const TIMEOUT_MS = 15_000;
@@ -124,15 +176,14 @@ async function get(url: string, signal?: AbortSignal, post?: string, acceptLangu
 	const res = await fetch(url, {
 		method: post ? "POST" : "GET",
 		headers: {
-			"User-Agent": UA,
-			Accept: "text/html,application/xhtml+xml",
-			"Accept-Language": acceptLanguage ?? "en-US,en;q=0.9",
+			...browserHeaders(host, { acceptLanguage }),
 			...(post ? { "Content-Type": "application/x-www-form-urlencoded" } : {}),
 		},
 		body: post,
 		signal: combined,
 		redirect: "follow",
 	});
+	storeCookies(host, res);
 	if (!res.ok) {
 		// 202 = DDG's anomaly/challenge wall — the body IS the challenge page, hand it
 		// to the parser so it can throw the structured 'ddg challenge' error

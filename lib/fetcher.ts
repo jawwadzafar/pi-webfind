@@ -9,6 +9,7 @@ import { topPassages, type PickedPassage } from "./rank.ts";
 import { extractPdf } from "./pdf.ts";
 import { assertSafeUrl, resolveSafe } from "./safe.ts";
 import { assertOnline, hostCooldownUntil, jinaGap, markOnline, noteNotFound, setHostCooldown, jinaAuth } from "./net.ts";
+import { browserHeaders, storeCookies } from "./engine.ts";
 
 export const UA =
 	"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
@@ -52,6 +53,7 @@ export interface FetchResult {
 	source:
 		| "direct"
 		| "wayback"
+		| "archive-ph"
 		| "jina"
 		| "github-api"
 		| "github-issue-api"
@@ -125,15 +127,14 @@ async function rawFetch(
 		await politeDelay(current.host, opts.signal, Number(opts.timeoutMs) || Number.POSITIVE_INFINITY);
 		const res = await fetch(current, {
 			headers: {
-				"User-Agent": UA,
-				Accept: "text/html,application/xhtml+xml,application/json,text/plain;q=0.9,*/*;q=0.5",
-				"Accept-Language": "en-US,en;q=0.9",
+				...browserHeaders(current.host, { accept: "text/html,application/xhtml+xml,application/json,text/plain;q=0.9,*/*;q=0.5" }),
 				...extraHeaders,
 				...custom,
 			},
 			redirect: "manual",
 			signal,
 		});
+		storeCookies(current.host, res);
 		const loc = res.headers.get("location");
 		if (res.status >= 300 && res.status < 400 && loc) {
 			await res.body?.cancel();
@@ -262,6 +263,31 @@ async function jinaFetchText(url: URL, opts: FetchOptions, contentType?: string)
 }
 
 // -------------------------------------------------------------- wayback
+
+/** Paywall escape hatch: archive.ph (archive.today) mirrors many metered pages Wayback misses. */
+async function archivePhFetch(url: URL, opts: FetchOptions): Promise<Extracted | null> {
+	if (opts.waybackEnabled === false) return null;
+	if (opts.headers && Object.keys(opts.headers).length > 0) return null; // never leak auth to the mirror
+	try {
+		assertOnline();
+		const mirror = new URL(`https://archive.ph/newest/${url.href}`);
+		const { res: sres, bodyText, bytes } = await rawFetch(mirror, { ...opts, headers: undefined });
+		if (!sres.ok) return null;
+		const { text } = await extract(mirror, sres.headers.get("content-type") ?? "", bodyText, { ...opts, maxChars: EXTRACT_CAP }, bytes, Number(sres.headers.get("content-length") ?? 0));
+		return {
+			text,
+			status: 200,
+			finalUrl: mirror.href,
+			contentType: sres.headers.get("content-type") ?? "text/html",
+			source: "archive-ph",
+			truncated: false,
+			fromCache: false,
+			at: Date.now(),
+		};
+	} catch {
+		return null; // archive.ph is flaky under load — best effort only
+	}
+}
 
 async function waybackFetch(
 	url: URL,
@@ -587,6 +613,17 @@ async function smartFetchRaw(url: string, opts: FetchOptions): Promise<Extracted
 					if (jina && jina.text.replace(/\s+/g, " ").trim().length > text.replace(/\s+/g, " ").trim().length) {
 						jina.notes = notes;
 						return store(cacheKey, jina, safeUrl);
+					}
+				}
+				// 200 but paywalled (short subscribe wall) → Wayback, then archive.ph
+				const looksPaywalled = res.status === 200 && ctHeader.includes("html") && !opts.raw &&
+					text.replace(/\s+/g, " ").trim().length < 1200 &&
+					/subscribe|paywall|sign in to read/i.test(text);
+				if (looksPaywalled && remaining() > 2_000 && opts.waybackEnabled !== false) {
+					const wb = await waybackFetch(safeUrl, inner) ?? await archivePhFetch(safeUrl, inner);
+					if (wb) {
+						wb.notes = [...notes, "paywall bypassed via mirror"];
+						return store(cacheKey, wb, safeUrl);
 					}
 				}
 				const out: Extracted = { text, status: res.status, finalUrl, contentType: ctHeader, source: "direct", truncated: false, fromCache: false, notes, date, at: Date.now() };
