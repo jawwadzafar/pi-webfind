@@ -128,7 +128,7 @@ async function get(url: string, signal?: AbortSignal, post?: string): Promise<st
 
 // ------------------------------------------------------------------ engines
 
-function parseDdgHtml(page: string): SearchResult[] {
+export function parseDdgHtml(page: string): SearchResult[] { // exported for tests
 	if (/anomaly-modal|g-recaptcha/.test(page)) throw new Error("ddg challenge");
 	const out: SearchResult[] = [];
 	const snippets = [...page.matchAll(/<a[^>]*class="result__snippet"[^>]*>([\s\S]*?)<\/a>/g)].map(
@@ -238,7 +238,7 @@ function isUrlEcho(s: string): boolean {
 }
 
 /** Parse r.jina.ai's markdown output of a DDG html/lite page into results. */
-function parseJinaDdg(md: string): SearchResult[] {
+export function parseJinaDdg(md: string): SearchResult[] { // exported for tests
 	const out: SearchResult[] = [];
 	const seen = new Map<string, SearchResult>();
 	// markdown links: [title](https://duckduckgo.com/l/?uddg=ENCODED ...) or direct links
@@ -478,6 +478,9 @@ export function normalizeUrl(u: string): string {
 		.replace(/^(www|m|amp|mobile)\./, "")
 		.replace(/^([a-z]{2,3})\.m\./, "$1.");
 	let path = url.pathname.replace(/\/+$/, "").replace(/^\/amp(?=\/)/, "").replace(/\/amp$/, "");
+	// /index.{html,htm,php} and hashbang paths fold to the directory
+	if (url.hash.startsWith("#!/")) path = url.hash.slice(2);
+	path = path.replace(/\/index\.(html?|php)$/i, "");
 	if (/(^|\.)(stackoverflow|superuser|serverfault)\.com$|\.stackexchange\.com$/.test(host)) {
 		path = path.replace(/^(\/questions\/\d+)\/.*/, "$1");
 	}
@@ -496,7 +499,7 @@ const WEIGHT: Record<string, number> = { ddg: 1, "ddg-lite": 1, "ddg-jina": 0.9,
  * field-merging rows that share a normalized URL: longest snippet, shortest
  * meaningful title, earliest non-crawl date, union of engine names.
  */
-function fuse(buckets: Array<{ name: string; rows: SearchResult[] }>, maxResults: number): SearchResult[] {
+export function fuse(buckets: Array<{ name: string; rows: SearchResult[] }>, maxResults: number): SearchResult[] { // exported for tests
 	const K = 60;
 	const scored = new Map<string, { r: SearchResult; s: number; engines: Set<string> }>();
 	for (const { name, rows } of buckets) {

@@ -374,7 +374,13 @@ export async function smartFetch(url: string, opts: FetchOptions): Promise<Fetch
 	if (picked.length === 0) {
 		return { ...result, text: result.text.slice(0, opts.maxChars), truncated: result.text.length > opts.maxChars };
 	}
-	const parts = picked.map((p) => (p.heading ? `## ${p.heading}\n${p.text}` : p.text));
+	// emit the heading only when it differs from the previous picked passage's heading
+	const parts: string[] = [];
+	let prevHeading: string | undefined;
+	for (const p of picked) {
+		parts.push(p.heading && p.heading !== prevHeading ? `## ${p.heading}\n${p.text}` : p.text);
+		prevHeading = p.heading;
+	}
 	const footer = `\n\n[${picked.length} of ${total} passages shown — most relevant to the query. Omit query for the page head.]`;
 	let body = parts.join("\n\n");
 	const truncated = body.length + footer.length > opts.maxChars;

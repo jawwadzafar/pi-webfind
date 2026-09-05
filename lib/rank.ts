@@ -6,7 +6,8 @@
  * Zero dependencies, no model calls.
  */
 
-const WORD_RE = /[a-z0-9_#+.-]+/g;
+const WORD_RE = /[\p{L}\p{N}_#+-]+(?:\.[\p{L}\p{N}_#+-]+)*/gu;
+const CJK_RE = /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}]+/gu;
 
 function stem(t: string): string {
 	if (t.length > 4 && t.endsWith("ing")) return t.slice(0, -3);
@@ -16,7 +17,25 @@ function stem(t: string): string {
 }
 
 export function tokenize(s: string): string[] {
-	return (s.toLowerCase().match(WORD_RE) ?? []).map(stem).filter((t) => t.length > 0);
+	const out: string[] = [];
+	for (const m of s.toLowerCase().matchAll(WORD_RE)) {
+		const w = m[0];
+		if (CJK_RE.test(w)) {
+			CJK_RE.lastIndex = 0;
+			for (const run of w.match(CJK_RE) ?? []) {
+				if (run.length === 1) out.push(run);
+				for (let i = 0; i + 1 < run.length; i++) out.push(run.slice(i, i + 2));
+			}
+			for (const r of w.replace(CJK_RE, " ").trim().split(/\s+/)) if (r) out.push(stem(r));
+			continue;
+		}
+		out.push(stem(w));
+		// dotted identifiers: also emit the last segment (react.useEffect -> useeffect)
+		const dot = w.lastIndexOf(".");
+		const tail = dot > 0 ? w.slice(dot + 1) : "";
+		if (tail && /\p{L}/u.test(tail)) out.push(stem(tail));
+	}
+	return out;
 }
 
 export interface Passage {
@@ -25,6 +44,8 @@ export interface Passage {
 	heading: string;
 	/** index in document order */
 	pos: number;
+	/** "code" = a whole fenced block (or chunk of one); exempt from MIN_PASSAGE */
+	kind: "prose" | "code";
 }
 
 const MIN_PASSAGE = 24;
@@ -35,7 +56,23 @@ export function splitPassages(text: string): Passage[] {
 	const lines = text.split("\n");
 	let heading = "";
 	let buf: string[] = [];
+	const FENCE_RE = /^\s*(```|~~~)/;
+	let fence: string[] | null = null;
 	for (const line of lines) {
+		if (fence) {
+			fence.push(line);
+			if (FENCE_RE.test(line)) {
+				pushFence(fence);
+				fence = null;
+			}
+			continue;
+		}
+		if (FENCE_RE.test(line)) {
+			push(buf.join("\n"));
+			buf = [];
+			fence = [line];
+			continue;
+		}
 		if (line.trim() === "") {
 			push(buf.join("\n"));
 			buf = [];
@@ -50,28 +87,50 @@ export function splitPassages(text: string): Passage[] {
 		}
 		buf.push(line);
 	}
+	if (fence) pushFence([...fence, fence[0].match(FENCE_RE)![1]!]); // unterminated fence at EOF
 	push(buf.join("\n").trim());
 	return passages;
+
+	/** Whole fenced block as one code passage (or ~900-char line-chunks when huge). */
+	function pushFence(fl: string[]) {
+		const opener = fl[0]!, closer = fl[fl.length - 1]!, body = fl.slice(1, -1);
+		if (body.join("\n").trim().length === 0) return;
+		const emit = (chunk: string[]) =>
+			passages.push({ text: [opener, ...chunk, closer].join("\n"), heading, pos: passages.length, kind: "code" });
+		if (body.join("\n").length <= 1200) return emit(body);
+		let chunk: string[] = [];
+		let size = 0;
+		for (const l of body) {
+			if (size + l.length > 900 && chunk.length) {
+				emit(chunk);
+				chunk = [];
+				size = 0;
+			}
+			chunk.push(l);
+			size += l.length + 1;
+		}
+		if (chunk.length) emit(chunk);
+	}
 
 	/** Long blobs (infoboxes, template junk, minified docs) split on sentence boundaries so scoring can discriminate. */
 	function push(raw: string) {
 		const t = raw.trim();
 		if (t.length < MIN_PASSAGE) return;
 		if (t.length <= 1200) {
-			passages.push({ text: t, heading, pos: passages.length });
+			passages.push({ text: t, heading, pos: passages.length, kind: "prose" });
 			return;
 		}
 		const sentences = t.match(/[^.!?\n]+[.!?]?\s*/g) ?? [t];
 		let cur = "";
 		for (const sen of sentences) {
 			if (cur.length + sen.length > 900 && cur.length >= MIN_PASSAGE) {
-				passages.push({ text: cur.trim(), heading, pos: passages.length });
+				passages.push({ text: cur.trim(), heading, pos: passages.length, kind: "prose" });
 				cur = sen;
 			} else {
 				cur += sen;
 			}
 		}
-		if (cur.trim().length >= MIN_PASSAGE) passages.push({ text: cur.trim(), heading, pos: passages.length });
+		if (cur.trim().length >= MIN_PASSAGE) passages.push({ text: cur.trim(), heading, pos: passages.length, kind: "prose" });
 	}
 }
 
@@ -89,33 +148,44 @@ export function scorePassages(passages: Passage[], query: string): Array<{ p: Pa
 	const qTokens = [...new Set(tokenize(query))];
 	if (qTokens.length === 0) return passages.map((p) => ({ p, score: 0 }));
 
-	const tokenSets: Array<Set<string>> = passages.map((p) => new Set(tokenize(p.text)));
+	const tfs: Array<Map<string, number>> = passages.map((p) => termFreq(tokenize(p.text)));
 	const N = passages.length;
 	const avgLen = passages.reduce((a, p) => a + p.text.length, 0) / Math.max(N, 1);
 	const k1 = 1.5;
 	const b = 0.75;
 	const wantCode = queryCodeish(query);
+	// document frequency per query token, computed once
+	const df = new Map<string, number>(qTokens.map((q) => [q, tfs.reduce((n, m) => n + (m.has(q) ? 1 : 0), 0)]));
+	// phrase bonus: multi-token query occurring verbatim in the passage
+	const phrase = query.toLowerCase().replace(/\s+/g, " ").trim();
 
 	return passages.map((p, i) => {
-		const tokens = tokenSets[i];
+		const tf = tfs[i];
 		const len = p.text.length;
 		// junk penalty: template/URL soup — real prose has few of these per 100 chars
 		const junk = (p.text.match(/\{\{|\}\}|\[\[|\]\]|https?:\/\//g) ?? []).length;
 		const junkDensity = junk / Math.max(len / 100, 1);
 		let score = 0;
 		for (const q of qTokens) {
-			if (!tokens.has(q)) continue;
-			let dfq = 0;
-			for (const ts of tokenSets) if (ts.has(q)) dfq++;
+			const n = tf.get(q) ?? 0;
+			if (!n) continue;
+			const dfq = df.get(q)!;
 			const idf = Math.log(1 + (N - dfq + 0.5) / (dfq + 0.5));
-			score += (idf * 1 * (k1 + 1)) / (1 + k1 * (1 - b + b * (len / avgLen)));
+			score += (idf * n * (k1 + 1)) / (n + k1 * (1 - b + b * (len / avgLen)));
 		}
 		if (p.heading && qTokens.some((q) => p.heading.toLowerCase().includes(q))) score *= 1.5;
+		if (qTokens.length >= 2 && phrase.length >= 6 && p.text.toLowerCase().replace(/\s+/g, " ").includes(phrase)) score *= 1.5;
 		if (wantCode && /```|\t|=>|function |const |def |class /.test(p.text)) score *= 1.2;
 		if (junkDensity > 1) score *= 0.3;
 		else if (junkDensity > 0.4) score *= 0.6;
 		return { p, score };
 	});
+}
+
+export function termFreq(tokens: string[]): Map<string, number> {
+	const m = new Map<string, number>();
+	for (const t of tokens) m.set(t, (m.get(t) ?? 0) + 1);
+	return m;
 }
 
 export interface PickedPassage {
