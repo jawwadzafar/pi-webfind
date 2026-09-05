@@ -1,0 +1,428 @@
+{
+	"q1": {
+		"query": "TypeError: Cannot read properties of undefined (reading 'map') react",
+		"ms": 3709,
+		"engines": [
+			"ddg",
+			"brave",
+			"bing"
+		],
+		"errors": [],
+		"results": [
+			{
+				"title": "× TypeError: Cannot read properties of undefined (reading 'map')",
+				"url": "https://stackoverflow.com/questions/69080597/%C3%97-typeerror-cannot-read-properties-of-undefined-reading-map",
+				"snippet": "",
+				"engine": "ddg-jina",
+				"engines": [
+					"ddg",
+					"brave"
+				]
+			},
+			{
+				"title": "Cannot read properties of undefined (reading 'map') in React",
+				"url": "https://bobbyhadz.com/blog/react-typeerror-cannot-read-property-map-of-undefined",
+				"snippet": "",
+				"engine": "ddg-jina",
+				"engines": [
+					"ddg",
+					"brave"
+				]
+			},
+			{
+				"title": "Fix The Error 'Cannot Read Properties Of Undefined Reading Map' - DhiWise",
+				"url": "https://www.dhiwise.com/post/learn-to-fix-the-error-cannot-read-properties-of-undefined",
+				"snippet": "",
+				"engine": "ddg-jina",
+				"date": "2025-08-20",
+				"engines": [
+					"ddg",
+					"brave"
+				]
+			},
+			{
+				"title": "Fix the \"Cannot read property 'map' of undefined\" Error in React",
+				"url": "https://typeofnan.dev/fix-cannot-read-property-map-of-undefined-error-in-react/",
+				"snippet": "",
+				"engine": "ddg-jina",
+				"engines": [
+					"ddg",
+					"brave"
+				]
+			},
+			{
+				"title": "الصفحة الرئيسية - بوابة التعليم",
+				"url": "https://edugate.moe.gov.sa/",
+				"snippet": "البوابة الموحدة لخدمات وزارة التعليم. اِستكشف تجربة رقمية متكاملة تتيح لك الوصول السريع إلى جميع الخدمات المقدمة من قبل وزارة التعليم في مكان واحد.",
+				"engine": "bing",
+				"date": "2026-09-03",
+				"engines": [
+					"bing"
+				]
+			},
+			{
+				"title": "How \"TypeError: Cannot Read Property 'Map' of Undefined\" - Kinsta",
+				"url": "https://kinsta.com/blog/typeerror-cannot-read-property-map-of-undefined/",
+				"snippet": "",
+				"engine": "ddg-jina",
+				"date": "2025-10-01",
+				"engines": [
+					"ddg"
+				]
+			},
+			{
+				"title": "بوابة التعليم",
+				"url": "https://edugate.moe.gov.sa/dashboard",
+				"snippet": "البوابة الموحدة لخدمات وزارة التعليم. اِستكشف تجربة رقمية متكاملة تتيح لك الوصول السريع إلى جميع الخدمات المقدمة من قبل وزارة التعليم في مكان واحد.",
+				"engine": "bing",
+				"date": "2026-09-04",
+				"engines": [
+					"bing"
+				]
+			},
+			{
+				"title": "Cannot read properties of undefined (reading 'map') in React",
+				"url": "https://stackoverflow.com/questions/69328926/cannot-read-properties-of-undefined-reading-map-in-react",
+				"snippet": "",
+				"engine": "ddg-jina",
+				"engines": [
+					"ddg"
+				]
+			}
+		]
+	},
+	"q3": {
+		"query": "postgres CREATE INDEX CONCURRENTLY documentation",
+		"ms": 3688,
+		"engines": [
+			"ddg",
+			"bing"
+		],
+		"errors": [
+			"brave: HTTP 429"
+		],
+		"results": [
+			{
+				"title": "PostgreSQL: Documentation: 18: CREATE INDEX",
+				"url": "https://www.postgresql.org/docs/current/sql-createindex.html",
+				"snippet": "",
+				"engine": "ddg-jina",
+				"date": "2026-08-13",
+				"engines": [
+					"ddg"
+				]
+			},
+			{
+				"title": "PostgreSQL: The world's most advanced open source database",
+				"url": "https://www.postgresql.org/",
+				"snippet": "PostgreSQL is a powerful, open source object-relational database system with over 35 years of active development that has earned it a strong reputation for reliability, feature robustness, and performance. There is a wealth of information to be found describing how to install and use PostgreSQL through the official documentation.",
+				"engine": "bing",
+				"date": "2026-09-03",
+				"engines": [
+					"bing"
+				]
+			},
+			{
+				"title": "CREATE INDEX CONCURRENTLY: The Complete PostgreSQL Guide",
+				"url": "https://dev.to/mickelsamuel/create-index-concurrently-the-complete-postgresql-guide-b7m",
+				"snippet": "",
+				"engine": "ddg-jina",
+				"date": "2026-03-02",
+				"engines": [
+					"ddg"
+				]
+			},
+			{
+				"title": "PostgreSQL: Downloads",
+				"url": "https://www.postgresql.org/download/",
+				"snippet": "PostgreSQL is available for download as ready-to-use packages or installers for various platforms, as well as a source code archive if you want to build it yourself. Select your operating system family:",
+				"engine": "bing",
+				"date": "2026-09-02",
+				"engines": [
+					"bing"
+				]
+			},
+			{
+				"title": "How to Use Postgres CREATE INDEX CONCURRENTLY - Bytebase",
+				"url": "https://www.bytebase.com/blog/postgres-create-index-concurrently/",
+				"snippet": "",
+				"engine": "ddg-jina",
+				"date": "2025-08-27",
+				"engines": [
+					"ddg"
+				]
+			},
+			{
+				"title": "PostgreSQL - Wikipedia",
+				"url": "https://en.wikipedia.org/wiki/PostgreSQL",
+				"snippet": "PostgreSQL (/ ˈpoʊstɡrɛskjuˌɛl / ⓘ POHST-gres-kew-EL), [11][12] also known as Postgres, is a free and open-source relational database management system (RDBMS) emphasizing extensibility and SQL compliance.",
+				"engine": "bing",
+				"date": "2026-08-29",
+				"engines": [
+					"bing"
+				]
+			},
+			{
+				"title": "Postgres building an index concurrently - Stack Overflow",
+				"url": "https://stackoverflow.com/questions/43125789/postgres-building-an-index-concurrently",
+				"snippet": "",
+				"engine": "ddg-jina",
+				"engines": [
+					"ddg"
+				]
+			},
+			{
+				"title": "GitHub - postgres/postgres: Mirror of the official PostgreSQL GIT ...",
+				"url": "https://github.com/postgres/postgres",
+				"snippet": "General documentation about this version of PostgreSQL can be found at https://www.postgresql.org/docs/devel/. In particular, information about building PostgreSQL from the source code can be found at https://www.postgresql.org/docs/devel/installation.html.",
+				"engine": "bing",
+				"date": "2025-08-25",
+				"engines": [
+					"bing"
+				]
+			}
+		]
+	},
+	"q1_ddg": {
+		"query": "TypeError: Cannot read properties of undefined (reading 'map') react",
+		"ms": 450,
+		"results": [
+			{
+				"title": "× TypeError: Cannot read properties of undefined (reading 'map')",
+				"url": "https://stackoverflow.com/questions/69080597/%C3%97-typeerror-cannot-read-properties-of-undefined-reading-map",
+				"snippet": "",
+				"engine": "ddg-jina"
+			},
+			{
+				"title": "How \"TypeError: Cannot Read Property 'Map' of Undefined\" - Kinsta",
+				"url": "https://kinsta.com/blog/typeerror-cannot-read-property-map-of-undefined/",
+				"snippet": "",
+				"engine": "ddg-jina",
+				"date": "2025-10-01"
+			},
+			{
+				"title": "Cannot read properties of undefined (reading 'map') in React",
+				"url": "https://stackoverflow.com/questions/69328926/cannot-read-properties-of-undefined-reading-map-in-react",
+				"snippet": "",
+				"engine": "ddg-jina"
+			},
+			{
+				"title": "Cannot read properties of undefined (reading 'map') in React",
+				"url": "https://bobbyhadz.com/blog/react-typeerror-cannot-read-property-map-of-undefined",
+				"snippet": "",
+				"engine": "ddg-jina"
+			},
+			{
+				"title": "Fix: 'TypeError: Cannot Read Properties of Undefined (Reading Map ...",
+				"url": "https://snipshift.dev/blog/fix-cannot-read-properties-undefined-map",
+				"snippet": "",
+				"engine": "ddg-jina",
+				"date": "2026-05-31"
+			},
+			{
+				"title": "Fix the \"Cannot read property 'map' of undefined\" Error in React",
+				"url": "https://typeofnan.dev/fix-cannot-read-property-map-of-undefined-error-in-react/",
+				"snippet": "",
+				"engine": "ddg-jina"
+			},
+			{
+				"title": "How to fix Cannot read properties of undefined (reading 'map') in React ...",
+				"url": "https://deverrors.com/errors/react-cannot-read-map-undefined",
+				"snippet": "",
+				"engine": "ddg-jina",
+				"date": "2025-12-09"
+			},
+			{
+				"title": "Fix The Error 'Cannot Read Properties Of Undefined Reading Map' - DhiWise",
+				"url": "https://www.dhiwise.com/post/learn-to-fix-the-error-cannot-read-properties-of-undefined",
+				"snippet": "",
+				"engine": "ddg-jina",
+				"date": "2025-08-20"
+			}
+		]
+	},
+	"q1_bing": {
+		"query": "TypeError: Cannot read properties of undefined (reading 'map') react",
+		"ms": 267,
+		"results": [
+			{
+				"title": "Brussels | vfsglobal",
+				"url": "https://visa.vfsglobal.com/bel/en/mes/attend-centre/brussels",
+				"snippet": "Visa Application Centre Malta Visa Application Centre, 467,Chaussee de Louvain, 2nd Floor, 1030, Schaerbeek, Brussels, Belgium",
+				"engine": "bing",
+				"date": "2026-09-03"
+			},
+			{
+				"title": "| vfsglobal - vfsglobal",
+				"url": "https://visa.vfsglobal.com/bel/en/gbr/attend-centre/Brussels",
+				"snippet": "VFS Global.",
+				"engine": "bing",
+				"date": "2026-09-04"
+			},
+			{
+				"title": "UK Visa Application Center in Brussels, UK Embassy in Brussels",
+				"url": "https://ukvisacenter.com/en/other/uk-visa-centres/belgium/brussels.html",
+				"snippet": "We will book an appointment at the UK Visa Application Centre for you at convinient date and time. Just head to the appointment, make photo for visa and submit your fingerprints.",
+				"engine": "bing",
+				"date": "2026-09-01"
+			},
+			{
+				"title": "The Kingdom of Belgium - Migration Department under the Ministry of the ...",
+				"url": "https://migracija.lrv.lt/en/structure-and-contacts/information-for-visitors/services-for-persons-abroad/e-resident-services/the-kingdom-of-belgium/",
+				"snippet": "The Visa Application Center Manager VFS Global, 467,Chaussee de Louvain, 2nd Floor,1030, Scharbeek, Brussels, Belgium Contact by e-mail: LTercBEL@vfsglobal.com More information: https://services.vfsglobal.com/bel/en/ltp/",
+				"engine": "bing",
+				"date": "2026-09-03"
+			},
+			{
+				"title": "| vfsglobal - vfsglobal",
+				"url": "https://services.vfsglobal.com/bel/en/lte/attend-centre/Brussels",
+				"snippet": "| vfsglobal - vfsglobal ... VFS Global",
+				"engine": "bing",
+				"date": "2026-09-04"
+			},
+			{
+				"title": "VF SERVICES BELGIUM à Schaerbeek - Chaussée de Louvain 467",
+				"url": "https://local.infobel.be/BE106456477-026400236/vf_services_belgium-schaerbeek.html",
+				"snippet": "Trouvez les coordonnées du VF SERVICES BELGIUM, telles que : un numéro de téléphone (02640...), email (..nbe@..), un site web, des heures d'ouverture, une adresse et plus encore.",
+				"engine": "bing",
+				"date": "2026-09-03"
+			},
+			{
+				"title": "UK visa services in Brussels now available through VFS Global",
+				"url": "https://www.vfsglobal.com/en/PDF/media-releases/2024/UK-visa-services-in-Brussels-now-available-through-VFS-Global.pdf",
+				"snippet": "VFS Global are proud to announce that residents of Belgium travelling to the UK can now book appointments to submit their visa applications through VFS Global’s new state-of-the-art Visa Ap-plication Centre (VAC) located at 1st Floor, Chaussée De Louvain 467, Schaerbeek 1030, Brussels.",
+				"engine": "bing",
+				"date": "2026-09-01"
+			},
+			{
+				"title": "British Embassy Brussels - GOV.UK",
+				"url": "https://www.gov.uk/world/organisations/british-embassy-brussels",
+				"snippet": "UK Visas & Immigration (UKVI) is responsible for all Visa matters. The British Embassy does not deal with visa services and cannot advise you on visa matters. Find more information about:...",
+				"engine": "bing",
+				"date": "2026-09-02"
+			}
+		]
+	},
+	"q3_ddg": {
+		"query": "postgres CREATE INDEX CONCURRENTLY documentation",
+		"ms": 3212,
+		"results": [
+			{
+				"title": "PostgreSQL: Documentation: 18: CREATE INDEX",
+				"url": "https://www.postgresql.org/docs/current/sql-createindex.html",
+				"snippet": "",
+				"engine": "ddg-jina",
+				"date": "2026-08-13"
+			},
+			{
+				"title": "CREATE INDEX CONCURRENTLY: The Complete PostgreSQL Guide",
+				"url": "https://dev.to/mickelsamuel/create-index-concurrently-the-complete-postgresql-guide-b7m",
+				"snippet": "",
+				"engine": "ddg-jina",
+				"date": "2026-03-02"
+			},
+			{
+				"title": "How to Use Postgres CREATE INDEX CONCURRENTLY - Bytebase",
+				"url": "https://www.bytebase.com/blog/postgres-create-index-concurrently/",
+				"snippet": "",
+				"engine": "ddg-jina",
+				"date": "2025-08-27"
+			},
+			{
+				"title": "Postgres building an index concurrently - Stack Overflow",
+				"url": "https://stackoverflow.com/questions/43125789/postgres-building-an-index-concurrently",
+				"snippet": "",
+				"engine": "ddg-jina"
+			},
+			{
+				"title": "How to Create Indexes Concurrently in PostgreSQL",
+				"url": "https://oneuptime.com/blog/post/2026-01-21-postgresql-concurrent-index/view",
+				"snippet": "",
+				"engine": "ddg-jina",
+				"date": "2026-01-21"
+			},
+			{
+				"title": "postgresql - CREATE INDEX CONCURRENTLY is executed but the CONCURRENTLY ...",
+				"url": "https://stackoverflow.com/questions/74865499/create-index-concurrently-is-executed-but-the-concurrently-option-lost-after-cre",
+				"snippet": "",
+				"engine": "ddg-jina"
+			},
+			{
+				"title": "PostgreSQL: Documentation: 18: Chapter 11. Indexes",
+				"url": "https://www.postgresql.org/docs/current/indexes.html",
+				"snippet": "",
+				"engine": "ddg-jina",
+				"date": "2026-08-13"
+			},
+			{
+				"title": "CREATE INDEX CONCURRENTLY in PostgreSQL: A Guide",
+				"url": "https://chat2db.ai/resources/blog/postgres-create-index-concurrently",
+				"snippet": "",
+				"engine": "ddg-jina",
+				"date": "2026-08-15"
+			}
+		]
+	},
+	"q3_bing": {
+		"query": "postgres CREATE INDEX CONCURRENTLY documentation",
+		"ms": 210,
+		"results": [
+			{
+				"title": "PostgreSQL: The world's most advanced open source database",
+				"url": "https://www.postgresql.org/",
+				"snippet": "PostgreSQL is a powerful, open source object-relational database system with over 35 years of active development that has earned it a strong reputation for reliability, feature robustness, and performance. There is a wealth of information to be found describing how to install and use PostgreSQL through the official documentation.",
+				"engine": "bing",
+				"date": "2026-09-03"
+			},
+			{
+				"title": "PostgreSQL: Downloads",
+				"url": "https://www.postgresql.org/download/",
+				"snippet": "PostgreSQL is available for download as ready-to-use packages or installers for various platforms, as well as a source code archive if you want to build it yourself. Select your operating system family:",
+				"engine": "bing",
+				"date": "2026-09-02"
+			},
+			{
+				"title": "PostgreSQL - Wikipedia",
+				"url": "https://en.wikipedia.org/wiki/PostgreSQL",
+				"snippet": "PostgreSQL (/ ˈpoʊstɡrɛskjuˌɛl / ⓘ POHST-gres-kew-EL), [11][12] also known as Postgres, is a free and open-source relational database management system (RDBMS) emphasizing extensibility and SQL compliance.",
+				"engine": "bing",
+				"date": "2026-08-29"
+			},
+			{
+				"title": "GitHub - postgres/postgres: Mirror of the official PostgreSQL GIT ...",
+				"url": "https://github.com/postgres/postgres",
+				"snippet": "General documentation about this version of PostgreSQL can be found at https://www.postgresql.org/docs/devel/. In particular, information about building PostgreSQL from the source code can be found at https://www.postgresql.org/docs/devel/installation.html.",
+				"engine": "bing",
+				"date": "2025-08-25"
+			},
+			{
+				"title": "PostgreSQL Tutorial - W3Schools",
+				"url": "https://www.w3schools.com/postgresql/index.php",
+				"snippet": "In this tutorial you get a step by step guide on how to install and create a PostgreSQL database. You will learn how to create a project where you can create, read, update, and delete data. You will learn how to query, filter, and sort data from the database.",
+				"engine": "bing",
+				"date": "2026-09-02"
+			},
+			{
+				"title": "pgAdmin - PostgreSQL Tools",
+				"url": "https://www.pgadmin.org/",
+				"snippet": "Run it on Windows, macOS or Linux as a desktop application, or deploy it as a web application reachable from any browser. Create, browse and maintain every PostgreSQL object through a graphical interface that keeps the generated SQL in plain sight.",
+				"engine": "bing",
+				"date": "2026-09-02"
+			},
+			{
+				"title": "Introduction | Postgres Guide - The Complete PostgreSQL Resource",
+				"url": "https://postgres.guide/docs/intro/",
+				"snippet": "Learn PostgreSQL fundamentals, benefits, and essential features - your comprehensive guide to this powerful open-source database.",
+				"engine": "bing",
+				"date": "2026-09-03"
+			},
+			{
+				"title": "EDB: Open-Source, Enterprise Postgres Database Management",
+				"url": "https://www.enterprisedb.com/downloads/postgres-postgresql-downloads",
+				"snippet": "PostgreSQL is the world's most advanced open source database and the fourth most popular database. In development for more than 20 years, PostgreSQL is managed by a well-organized and highly principled and experienced open source community.",
+				"engine": "bing",
+				"date": "2026-09-02"
+			}
+		]
+	}
+}

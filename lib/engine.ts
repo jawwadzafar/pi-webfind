@@ -12,6 +12,8 @@
  * (JSON snapshot under ~/.pi/agent/cache/webfind, 10 min TTL).
  */
 import { createDiskBackedCache } from "./cache.ts";
+import { hostCooldownUntil, setHostCooldown } from "./net.ts";
+import { tokenize } from "./rank.ts";
 
 const UA =
 	"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
@@ -26,6 +28,18 @@ export interface SearchResult {
 	engine: string;
 	/** Publication date when the source surface provides one (ISO or human-readable). */
 	date?: string;
+	/** "indexed" = crawl stamp (e.g. Bing pubDate within 3 days of now), not a publication date */
+	dateKind?: "published" | "indexed";
+	/** every engine that returned this URL (set by fuse) */
+	engines?: string[];
+}
+
+export interface SearchOutcome {
+	results: SearchResult[];
+	engines: string[];
+	errors: string[];
+	/** per engine: rows returned → rows that passed the relevance gate */
+	stats: Record<string, { got: number; kept: number }>;
 }
 
 // ---------------------------------------------------------------- utilities
@@ -99,13 +113,23 @@ async function get(url: string, signal?: AbortSignal, post?: string): Promise<st
 		signal: combined,
 		redirect: "follow",
 	});
-	if (!res.ok) throw new Error(`HTTP ${res.status}`);
+	if (!res.ok) {
+		// 202 = DDG's anomaly/challenge wall — the body IS the challenge page, hand it
+		// to the parser so it can throw the structured 'ddg challenge' error
+		if (res.status === 202 && (res.headers.get("content-type") ?? "").includes("html")) {
+			return res.text();
+		}
+		const err = new Error(`HTTP ${res.status}`) as Error & { status?: number };
+		err.status = res.status;
+		throw err;
+	}
 	return res.text();
 }
 
 // ------------------------------------------------------------------ engines
 
 function parseDdgHtml(page: string): SearchResult[] {
+	if (/anomaly-modal|g-recaptcha/.test(page)) throw new Error("ddg challenge");
 	const out: SearchResult[] = [];
 	const snippets = [...page.matchAll(/<a[^>]*class="result__snippet"[^>]*>([\s\S]*?)<\/a>/g)].map(
 		(m) => stripTags(m[1]),
@@ -151,7 +175,16 @@ function parseBrave(page: string): SearchResult[] {
 		const url = unwrapRedirect(m[1]);
 		if (!url || seen.has(url) || /search\.brave\.com|brave\.com\/search/.test(url)) continue;
 		seen.add(url);
-		out.push({ title: stripTags(m[2]) || url, url, snippet: "", engine: "brave" });
+		// title: inner element with class~="title" when present; else the last
+		// breadcrumb segment of the anchor text ("Site › Path › Page Title")
+		const inner = m[2];
+		const tm = inner.match(/<[^>]*class="[^"]*\btitle[^"]*"[^>]*>([\s\S]*?)<\/[^>]+>/);
+		const rawText = stripTags(inner);
+		const fallbackTitle = rawText.includes("›") ? rawText.split("›").pop()!.trim() : rawText;
+		const title = (tm ? stripTags(tm[1]) : fallbackTitle).slice(0, 120) || url;
+		// the rest of the anchor text after the title is the snippet
+		const snippet = (tm ? rawText.replace(stripTags(tm[1]), "").trim() : "").slice(0, 200);
+		out.push({ title, url, snippet, engine: "brave" });
 	}
 	// Fallback: any external anchor with heading-like content
 	if (out.length === 0) {
@@ -166,7 +199,7 @@ function parseBrave(page: string): SearchResult[] {
 			)
 				continue;
 			seen.add(url);
-			out.push({ title, url, snippet: "", engine: "brave" });
+			out.push({ title: title.slice(0, 120), url, snippet: "", engine: "brave" });
 		}
 	}
 	return out;
@@ -199,55 +232,65 @@ async function jinaGet(url: string, signal?: AbortSignal): Promise<string> {
 	return res.text();
 }
 
+/** Bare domain/path echo of the URL (favicon-adjacent link in relayed DDG), not prose. */
+function isUrlEcho(s: string): boolean {
+	return /^(?:[a-z0-9-]+\.)+[a-z]{2,6}(?:\/\S*)?$/i.test(s);
+}
+
 /** Parse r.jina.ai's markdown output of a DDG html/lite page into results. */
 function parseJinaDdg(md: string): SearchResult[] {
 	const out: SearchResult[] = [];
-	const seen = new Set<string>();
+	const seen = new Map<string, SearchResult>();
 	// markdown links: [title](https://duckduckgo.com/l/?uddg=ENCODED ...) or direct links
-	for (const m of md.matchAll(/\[([^\]]{4,120})\]\((https?:\/\/[^)]+)\)/g)) {
-		const title = decodeEntities(m[1].replace(/[*_`]/g, "")).trim();
+	for (const m of md.matchAll(/\[([^\]]{4,400})\]\((https?:\/\/[^)]+)\)/g)) {
+		const text = decodeEntities(m[1].replace(/[*_`]/g, "")).trim();
 		const url = unwrapRedirect(m[2]);
-		if (!url || seen.has(url)) continue;
+		if (!url) continue;
 		if (/duckduckgo\.com(?!\/l\/)|\/y\.js|bing\.com|\.svg/.test(url)) continue;
-		seen.add(url);
-		// date trails the URL line on html variant ("… 2026-08-20T00:00:00.0000000")
-		const tail = md.slice(m.index, m.index + 1200);
-		const d = tail.match(/\b(20[12]\d-\d{2}-\d{2})(?:T[0-9:.]+)?/);
-		const date = d ? d[1] : undefined;
-		out.push({ title, url, snippet: "", engine: "ddg-jina", ...(date ? { date } : {}) });
+		const row = seen.get(url);
+		if (!row) {
+			// date trails the URL line on html variant ("… 2026-08-20T00:00:00.0000000")
+			const tail = md.slice(m.index, m.index + 1200);
+			const d = tail.match(/\b(20[12]\d-\d{2}-\d{2})(?:T[0-9:.]+)?/);
+			const date = d ? d[1] : undefined;
+			const r: SearchResult = { title: text, url, snippet: "", engine: "ddg-jina", ...(date ? { date } : {}) };
+			seen.set(url, r);
+			out.push(r);
+		} else if (row.snippet === "" && !isUrlEcho(text)) {
+			// the result__snippet anchor renders as a second [text](same uddg url) link
+			// right after the title link — jina drops the class info, we recover it here.
+			// (a bare domain/path echo of the URL is the favicon-adjacent link, not prose)
+			row.snippet = text.slice(0, 300);
+		}
 	}
 	return out;
 }
 
-export async function ddgSearch(
-	query: string,
-	maxResults: number,
-	recency: Recency,
-	signal?: AbortSignal,
-): Promise<SearchResult[]> {
+/** DDG without the jina relay: html GET → lite GET → html POST. */
+async function ddgDirect(query: string, maxResults: number, recency: Recency, signal?: AbortSignal): Promise<SearchResult[]> {
 	const params = new URLSearchParams({ q: query });
 	if (recency) params.set("df", recency);
 	const enc = params.toString();
-	let directFailed = false;
 
-	// 0. jina proxy (different IP pool — works when our IP is rate-limited)
+	// 1. html GET — a challenge wall (202/403) means this IP is flagged: the POST
+	// retry below would only work around a *soft* block, and lite/POST serve the
+	// same wall from the same IP, so give up at once and let jina's IP pool try.
+	let softEmpty = false;
 	try {
-		const results = parseJinaDdg(await jinaGet(`https://html.duckduckgo.com/html/?${enc}`, signal));
+		const page = await get(`https://html.duckduckgo.com/html/?${enc}`, signal);
+		const results = parseDdgHtml(page);
 		if (results.length > 0) return results.slice(0, maxResults);
-	} catch {
-		/* try next */
+		softEmpty = true; // 200 but zero rows — bot-wall serving empty markup
+	} catch (err) {
+		const msg = String((err as Error)?.message ?? err);
+		const st = (err as Error & { status?: number }).status;
+		if (msg === "ddg challenge" || st === 202 || st === 403) {
+			throw new Error("ddg challenge (rate-limited; jina relay may still work)");
+		}
 	}
 
-	// 1. html GET
-	try {
-		const results = parseDdgHtml(await get(`https://html.duckduckgo.com/html/?${enc}`, signal));
-		if (results.length > 0) return results.slice(0, maxResults);
-		directFailed = true;
-	} catch {
-		directFailed = true;
-	}
-
-	// 2. lite GET
+	// 2. lite GET (cheap retry on transient network errors — a challenge wall never
+	// reaches this point; that case threw above)
 	try {
 		const results = parseDdgLite(await get(`https://lite.duckduckgo.com/lite/?${enc}`, signal));
 		if (results.length > 0) return results.slice(0, maxResults);
@@ -255,18 +298,48 @@ export async function ddgSearch(
 		/* try next */
 	}
 
-	// 3. html POST (often bypasses GET challenges)
-	try {
-		const results = parseDdgHtml(await get("https://html.duckduckgo.com/html/", signal, enc));
-		if (results.length > 0) return results.slice(0, maxResults);
-	} catch {
-		/* fall to jina */
+	// 3. html POST (often bypasses soft GET blocks)
+	if (softEmpty) {
+		try {
+			const results = parseDdgHtml(await get("https://html.duckduckgo.com/html/", signal, enc));
+			if (results.length > 0) return results.slice(0, maxResults);
+		} catch {
+			/* fall to jina */
+		}
 	}
+	throw new Error("no results from duckduckgo (direct)");
+}
 
-	// 4. jina relay of lite endpoint (last resort for search)
-	const results = parseJinaDdg(await jinaGet(`https://lite.duckduckgo.com/lite/?${enc}`, signal));
-	if (results.length === 0) throw new Error("no results from duckduckgo (direct + jina proxy)");
-	return results.slice(0, maxResults);
+/** DDG via the jina relay (different IP pool): html first, then lite. */
+async function ddgJina(query: string, maxResults: number, recency: Recency, signal?: AbortSignal): Promise<SearchResult[]> {
+	const params = new URLSearchParams({ q: query });
+	if (recency) params.set("df", recency);
+	const enc = params.toString();
+	try {
+		const results = parseJinaDdg(await jinaGet(`https://html.duckduckgo.com/html/?${enc}`, signal));
+		if (results.length > 0) return results.slice(0, maxResults);
+	} catch (err) {
+		// the relay itself failed (rate limit / network) — the lite relay hits the
+		// same r.jina.ai host and will fail the same way; don't pay the jina gap twice
+		throw new Error(`no results from duckduckgo (jina relay: ${(err as Error)?.message ?? err})`);
+	}
+	// html relay answered but zero rows parsed (challenge relayed, or genuinely empty).
+	// A second relayed request pays the 3.5s jina gap and relays the same challenge — stop here.
+	throw new Error("no results from duckduckgo (jina relay)");
+}
+
+/** DDG with the jina relay as fallback — kept for `engine:'ddg'`. */
+export async function ddgSearch(
+	query: string,
+	maxResults: number,
+	recency: Recency,
+	signal?: AbortSignal,
+): Promise<SearchResult[]> {
+	try {
+		return await ddgDirect(query, maxResults, recency, signal);
+	} catch {
+		return ddgJina(query, maxResults, recency, signal);
+	}
 }
 
 export async function braveSearch(
@@ -275,12 +348,24 @@ export async function braveSearch(
 	recency: Recency,
 	signal?: AbortSignal,
 ): Promise<SearchResult[]> {
+	const cooldown = hostCooldownUntil("search.brave.com");
+	if (cooldown > Date.now()) {
+		throw new Error(`brave: cooling down (${Math.ceil((cooldown - Date.now()) / 1000)}s)`);
+	}
 	const params = new URLSearchParams({ q: query });
 	if (recency) {
 		const map: Record<string, string> = { d: "pd", w: "pw", m: "pm", y: "py" };
 		params.set("tf", map[recency]);
 	}
-	const results = parseBrave(await get(`https://search.brave.com/search?${params}`, signal));
+	let page: string;
+	try {
+		page = await get(`https://search.brave.com/search?${params}`, signal);
+	} catch (err) {
+		const msg = String((err as Error)?.message ?? err);
+		if (msg === "HTTP 429") setHostCooldown("search.brave.com", 60_000);
+		throw err;
+	}
+	const results = parseBrave(page);
 	if (results.length === 0) throw new Error("no results from brave");
 	return results.slice(0, maxResults);
 }
@@ -290,16 +375,21 @@ function parseRssItems(xml: string, engine: string): SearchResult[] {
 	for (const m of xml.matchAll(/<item>([\s\S]*?)<\/item>/g)) {
 		const item = m[1];
 		const title = stripTags(item.match(/<title>([\s\S]*?)<\/title>/)?.[1] ?? "");
-		const url = (item.match(/<link>([\s\S]*?)<\/link>/)?.[1] ?? "").trim();
+		const url = decodeEntities(item.match(/<link>([\s\S]*?)<\/link>/)?.[1] ?? "").trim();
 		const snippet = stripTags(item.match(/<description>([\s\S]*?)<\/description>/)?.[1] ?? "");
 		if (!title || !/^https?:\/\//.test(url)) continue;
 		const pubRaw = (item.match(/<pubDate>([\s\S]*?)<\/pubDate>/)?.[1] ?? "").trim();
 		let date: string | undefined;
+		let dateKind: SearchResult["dateKind"];
 		if (pubRaw) {
 			const ts = Date.parse(pubRaw);
-			if (!Number.isNaN(ts)) date = new Date(ts).toISOString().slice(0, 10);
+			if (!Number.isNaN(ts)) {
+				date = new Date(ts).toISOString().slice(0, 10);
+				// a pubDate within 3 days of now is a crawl stamp, not a publication date
+				dateKind = Date.now() - ts < 3 * 86_400_000 ? "indexed" : "published";
+			}
 		}
-		out.push({ title, url, snippet, engine, ...(date ? { date } : {}) });
+		out.push({ title, url, snippet, engine, ...(date ? { date, dateKind } : {}) });
 	}
 	return out;
 }
@@ -325,13 +415,159 @@ export async function bingRssSearch(
 	return results.slice(0, maxResults);
 }
 
-/** Run several engines in parallel; RRF-fuse, dedupe by URL, consensus ranks first. */
+// ---------------------------------------------------------------- relevance
+
+const STOP_TOKENS = new Set([
+	"how", "to", "in", "vs", "the", "a", "an", "of", "for", "and", "or", "is", "what", "with", "on", "does", "do",
+]);
+
+/** Query tokens used by the relevance gate (deduped, stopwords + ≤2-char words removed). */
+function gateTokens(query: string): string[] {
+	return [...new Set(tokenize(query))].filter((t) => t.length > 2 && !STOP_TOKENS.has(t));
+}
+
+/** Does `doc` contain a hit for query token `q`? Exact or prefix match when either side is ≥ 5 chars. */
+function tokenHit(q: string, docTokens: Set<string>): boolean {
+	if (docTokens.has(q)) return true;
+	if (q.length >= 5) {
+		for (const d of docTokens) if (d.startsWith(q) || (d.length >= 5 && q.startsWith(d))) return true;
+	}
+	return false;
+}
+
+/**
+ * Drop rows that share almost no vocabulary with the query. Runs before fusion
+ * on every engine's bucket (including single-engine modes). Non-Latin queries
+ * (tokenizer yields nothing) pass everything through.
+ */
+export function relevanceGate(query: string, rows: SearchResult[]): SearchResult[] {
+	const q = gateTokens(query);
+	if (q.length === 0) return rows;
+	const minHits = Math.min(2, q.length);
+	return rows.filter((r) => {
+		const path = (() => {
+			try {
+				return decodeURIComponent(new URL(r.url).pathname).replace(/[-_/.]+/g, " ");
+			} catch {
+				return r.url;
+			}
+		})();
+		const docTokens = new Set(tokenize(`${r.title} ${r.snippet} ${path}`));
+		let hits = 0;
+		for (const t of q) if (tokenHit(t, docTokens)) hits++;
+		return hits >= minHits;
+	});
+}
+
+// --------------------------------------------------------------- url normalize
+
+/**
+ * Canonical key for cross-engine URL dedupe: scheme/hash stripped, tracking
+ * params dropped, www/mobile/amp hosts and paths collapsed, SO question slugs
+ * trimmed, params sorted.
+ */
+export function normalizeUrl(u: string): string {
+	let url: URL;
+	try {
+		url = new URL(u);
+	} catch {
+		return u.trim().toLowerCase();
+	}
+	const host = url.hostname
+		.toLowerCase()
+		.replace(/^(www|m|amp|mobile)\./, "")
+		.replace(/^([a-z]{2,3})\.m\./, "$1.");
+	let path = url.pathname.replace(/\/+$/, "").replace(/^\/amp(?=\/)/, "").replace(/\/amp$/, "");
+	if (/(^|\.)(stackoverflow|superuser|serverfault)\.com$|\.stackexchange\.com$/.test(host)) {
+		path = path.replace(/^(\/questions\/\d+)\/.*/, "$1");
+	}
+	const params = [...url.searchParams]
+		.filter(([k]) => !/^(utm_\w+|fbclid|gclid|ref|ref_src|si)$/i.test(k))
+		.sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
+	return `${host}${path || "/"}${params.length ? "?" + params.map(([k, v]) => `${k}=${v}`).join("&") : ""}`;
+}
+
+// ------------------------------------------------------------------- fusion
+
+const WEIGHT: Record<string, number> = { ddg: 1, "ddg-lite": 1, "ddg-jina": 0.9, brave: 1, bing: 0.5 };
+
+/**
+ * Reciprocal-rank fusion across engine buckets (k=60, per-engine weights),
+ * field-merging rows that share a normalized URL: longest snippet, shortest
+ * meaningful title, earliest non-crawl date, union of engine names.
+ */
+function fuse(buckets: Array<{ name: string; rows: SearchResult[] }>, maxResults: number): SearchResult[] {
+	const K = 60;
+	const scored = new Map<string, { r: SearchResult; s: number; engines: Set<string> }>();
+	for (const { name, rows } of buckets) {
+		rows.forEach((r, i) => {
+			const key = normalizeUrl(r.url);
+			const cur = scored.get(key) ?? { r: { ...r }, s: 0, engines: new Set<string>() };
+			cur.s += (WEIGHT[name] ?? 1) / (K + i + 1);
+			cur.engines.add(name);
+			if (r.snippet.length > cur.r.snippet.length) cur.r.snippet = r.snippet;
+			if (r.title.length >= 8 && r.title.length < cur.r.title.length) cur.r.title = r.title;
+			if (r.date && r.dateKind !== "indexed" && (!cur.r.date || cur.r.dateKind === "indexed" || r.date < cur.r.date)) {
+				cur.r.date = r.date;
+				cur.r.dateKind = "published";
+			}
+			scored.set(key, cur);
+		});
+	}
+	return [...scored.values()]
+		.sort((a, b) => b.s - a.s)
+		.slice(0, maxResults)
+		.map((e) => ({ ...e.r, engines: [...e.engines] }));
+}
+
+// --------------------------------------------------------------------- race
+
+/**
+ * Default engine: DDG-direct and Bing RSS in parallel, gated, RRF-fused.
+ * Fast path returns as soon as one bucket has ≥5 kept rows (300 ms grace for
+ * the other); Brave (cooldown-aware) then jina-relayed DDG only when both
+ * primary legs came up empty.
+ */
+export async function searchRace(
+	query: string,
+	maxResults: number,
+	recency: Recency,
+	signal?: AbortSignal,
+): Promise<SearchOutcome> {
+	const stats: SearchOutcome["stats"] = {};
+	const errors: string[] = [];
+	const buckets: Array<{ name: string; rows: SearchResult[] }> = [];
+	const leg = (name: string, p: Promise<SearchResult[]>) =>
+		p.then(
+			(rows) => {
+				const kept = relevanceGate(query, rows);
+				stats[name] = { got: rows.length, kept: kept.length };
+				if (kept.length) buckets.push({ name, rows: kept });
+			},
+			(e) => {
+				errors.push(`${name}: ${(e as Error)?.message ?? e}`);
+			},
+		);
+	const ddg = leg("ddg", ddgDirect(query, 15, recency, signal));
+	const bing = leg("bing", bingRssSearch(query, 15, recency, signal));
+	await Promise.race([ddg, bing]);
+	if (buckets.some((b) => b.rows.length >= 5)) await Promise.race([Promise.all([ddg, bing]), sleep(300, signal)]);
+	else await Promise.all([ddg, bing]);
+	const challenged = errors.some((e) => e.startsWith("ddg: ddg challenge"));
+	if (buckets.length === 0 && !challenged && hostCooldownUntil("search.brave.com") <= Date.now()) {
+		await leg("brave", braveSearch(query, 15, recency, signal));
+	}
+	if (buckets.length === 0) await leg("ddg-jina", ddgJina(query, 15, recency, signal));
+	return { results: fuse(buckets, maxResults), engines: buckets.map((b) => b.name), errors, stats };
+}
+
+/** Run several engines in parallel; gate, RRF-fuse by normalized URL, merge fields. */
 export async function multiSearch(
 	query: string,
 	maxResults: number,
 	recency: Recency,
 	signal?: AbortSignal,
-): Promise<{ results: SearchResult[]; engines: string[]; errors: string[] }> {
+): Promise<SearchOutcome> {
 	const attempts: Array<{ name: string; fn: () => Promise<SearchResult[]> }> = [
 		{ name: "ddg", fn: () => ddgSearch(query, 15, recency, signal) },
 		{ name: "brave", fn: () => braveSearch(query, 15, recency, signal) },
@@ -341,35 +577,21 @@ export async function multiSearch(
 	const namedBuckets: Array<{ name: string; rows: SearchResult[] }> = [];
 	const engines: string[] = [];
 	const errors: string[] = [];
+	const stats: SearchOutcome["stats"] = {};
 	settled.forEach((r, i) => {
-		const idx = i as number;
-		if (r.status === "fulfilled" && r.value.length > 0) {
-			namedBuckets.push({ name: attempts[idx]!.name, rows: r.value });
-			engines.push(attempts[idx]!.name);
-		} else if (r.status === "rejected") {
-			errors.push(`${attempts[idx]!.name}: ${(r.reason as Error)?.message ?? r.reason}`);
+		const name = attempts[i]!.name;
+		if (r.status === "fulfilled") {
+			const kept = relevanceGate(query, r.value);
+			stats[name] = { got: r.value.length, kept: kept.length };
+			if (kept.length > 0) {
+				namedBuckets.push({ name, rows: kept });
+				engines.push(name);
+			}
+		} else {
+			errors.push(`${name}: ${(r.reason as Error)?.message ?? r.reason}`);
 		}
 	});
-	// reciprocal rank fusion (RRF, k=60) — consensus hits across engines rank higher, dedupe by normalized URL
-	const K = 60;
-	const norm = (u: string) => u.replace(/\/+$/, "").replace(/^https?:\/\/www\./, "http://");
-	const scored = new Map<string, { r: SearchResult; s: number; engines: Set<string> }>();
-	for (const bucket of namedBuckets) {
-		bucket.rows.forEach((r, i) => {
-			const key = norm(r.url);
-			const e = scored.get(key) ?? { r, s: 0, engines: new Set<string>() };
-			e.s += 1 / (K + i + 1);
-			e.engines.add(bucket.name);
-			scored.set(key, e);
-		});
-	}
-	const merged = [...scored.values()]
-		.sort((a, b) => b.s - a.s)
-		.slice(0, maxResults)
-		.map((e) => ({ ...e.r, engines: [...e.engines] }) as SearchResult & { engines?: string[] });
-	if (merged.length > 0) return { results: merged, engines, errors };
-	// every bucket empty/rejected — return the (empty) outcome instead of undefined
-	return { results: [], engines, errors };
+	return { results: fuse(namedBuckets, maxResults), engines, errors, stats };
 }
 
 // -------------------------------------------------------------------- cache

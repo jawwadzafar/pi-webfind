@@ -20,7 +20,10 @@ import {
 	cacheSet,
 	ddgSearch,
 	multiSearch,
+	relevanceGate,
+	searchRace,
 	type Recency,
+	type SearchOutcome,
 	type SearchResult,
 } from "../lib/engine.ts";
 import {
@@ -56,7 +59,10 @@ function fmtResults(results: Row[]): string {
 	if (results.length === 0) return "No results found.";
 	return results
 		.map((r, i) => {
-			const lines = [`${i + 1}. ${r.title}`, `   ${r.url}${r.date ? `  (${r.date})` : ""}`];
+			// (indexed 2026-09-04) marks a crawl stamp, not a publication date
+			const date = r.date ? (r.dateKind === "indexed" ? `  (indexed ${r.date})` : `  (${r.date})`) : "";
+			const via = (r.engines ?? []).length > 0 ? `  · ${(r.engines ?? []).join("+")}` : "";
+			const lines = [`${i + 1}. ${r.title}`, `   ${r.url}${date}${via}`];
 			if (r.meta) lines.push(`   ${r.meta}`);
 			if (r.excerpt) lines.push(`   excerpt: ${clip(r.excerpt, 400)}`);
 			else if (r.snippet) lines.push(`   ${clip(r.snippet, 250)}`);
@@ -271,7 +277,7 @@ export default function (pi: ExtensionAPI) {
 			query: Type.String({ description: "Search query" }),
 			max_results: Type.Optional(Type.Number({ description: "Max results, 1-20 (default 8)" })),
 			recency: Type.Optional(Type.String({ description: "d=day, w=week, m=month, y=year (optional)" })),
-			engine: Type.Optional(Type.String({ description: "ddg (default) | brave | bing | multi (parallel merge)" })),
+			engine: Type.Optional(Type.String({ description: "auto (default: ddg+bing race) | ddg | brave | bing | multi (all in parallel)" })),
 			refresh: Type.Optional(Type.Boolean({ description: "Skip the 10-minute cache" })),
 			deep: Type.Optional(
 				Type.Union([Type.Boolean(), Type.Number()], {
@@ -286,31 +292,36 @@ export default function (pi: ExtensionAPI) {
 			const recency = (["d", "w", "m", "y"] as const).includes(params.recency as any)
 				? (params.recency as Recency)
 				: undefined;
-			const engine = params.engine ?? "ddg";
+			const engine = params.engine ?? "auto";
 			const deepN = params.deep === true ? 4 : typeof params.deep === "number" ? Math.min(Math.max(Math.round(params.deep), 1), 8) : 0;
 			const cacheKey = `s:${engine}:${recency ?? ""}:${maxResults}:${params.query}:deep${deepN}`;
-			const run = async () => {
-				if (engine === "multi") {
-					onUpdate?.({ content: [{ type: "text", text: "…" }], details: { step: "querying ddg + brave in parallel…" } });
-					const r = await multiSearch(params.query, maxResults, recency, signal);
-					return { results: r.results as Row[], engines: r.engines, errors: r.errors };
+			const run = async (): Promise<SearchOutcome> => {
+				if (engine === "multi" || engine === "auto") {
+					onUpdate?.({
+						content: [{ type: "text", text: "…" }],
+						details: { step: engine === "multi" ? "querying ddg + brave + bing in parallel…" : "querying ddg + bing…" },
+					});
+					const r = engine === "multi"
+						? await multiSearch(params.query, maxResults, recency, signal)
+						: await searchRace(params.query, maxResults, recency, signal);
+					return r;
 				}
 				if (engine === "brave") {
 					onUpdate?.({ content: [{ type: "text", text: "…" }], details: { step: "querying brave…" } });
-					return { results: (await braveSearch(params.query, maxResults, recency, signal)) as Row[], engines: ["brave"], errors: [] as string[] };
+					const rows = await braveSearch(params.query, maxResults, recency, signal);
+					const kept = relevanceGate(params.query, rows) as Row[];
+					return { results: kept as unknown as SearchResult[], engines: ["brave"], errors: [], stats: { brave: { got: rows.length, kept: kept.length } } };
 				}
 				if (engine === "bing") {
 					onUpdate?.({ content: [{ type: "text", text: "…" }], details: { step: "querying bing rss…" } });
-					return { results: (await bingRssSearch(params.query, maxResults, recency, signal)) as Row[], engines: ["bing"], errors: [] as string[] };
+					const rows = await bingRssSearch(params.query, maxResults, recency, signal);
+					const kept = relevanceGate(params.query, rows) as Row[];
+					return { results: kept as unknown as SearchResult[], engines: ["bing"], errors: [], stats: { bing: { got: rows.length, kept: kept.length } } };
 				}
 				onUpdate?.({ content: [{ type: "text", text: "…" }], details: { step: "querying duckduckgo…" } });
-				try {
-					return { results: (await ddgSearch(params.query, maxResults, recency, signal)) as Row[], engines: ["ddg"], errors: [] as string[] };
-				} catch (err) {
-					// ddg fully failed — structured bing rss before giving up
-					onUpdate?.({ content: [{ type: "text", text: "…" }], details: { step: "ddg failed — trying bing rss…" } });
-					return { results: (await bingRssSearch(params.query, maxResults, recency, signal)) as Row[], engines: ["bing"], errors: [String((err as Error)?.message ?? err)] };
-				}
+				const rows = await ddgSearch(params.query, maxResults, recency, signal);
+				const kept = relevanceGate(params.query, rows) as Row[];
+				return { results: kept as unknown as SearchResult[], engines: ["ddg"], errors: [], stats: { ddg: { got: rows.length, kept: kept.length } } };
 			};
 			try {
 				let cachedHit = false;
@@ -318,13 +329,21 @@ export default function (pi: ExtensionAPI) {
 					const hit = cacheGet(cacheKey);
 					if (hit) {
 						cachedHit = true;
+						// rows carry their engine set post-fusion; derive engines from them so the
+						// renderer shows "via cache · ddg + bing", not "via cache · cache"
+						const hitEngines = hit.engines.length > 0
+							? hit.engines
+							: [...new Set(hit.results.flatMap((r) => r.engines ?? [r.engine]))];
 						return {
 							content: [{ type: "text", text: `[cached]\n${fmtResults(hit.results)}` }],
-							details: { cached: true, results: hit.results, engines: hit.engines, count: hit.results.length, durationMs: Date.now() - started },
+							details: { cached: true, results: hit.results, engines: hitEngines, count: hit.results.length, durationMs: Date.now() - started },
 						};
 					}
 				}
-				const { results, engines, errors } = await run();
+				const { results, engines, errors, stats } = await run();
+				if (results.length === 0) {
+					throw new Error(`all engines failed — ${errors.join("; ") || "no results from any engine"}`);
+				}
 				// deep mode: read top results in parallel, attach query-relevant excerpts
 				if (deepN > 0 && results.length > 0 && !cachedHit) {
 					onUpdate?.({
@@ -367,36 +386,20 @@ export default function (pi: ExtensionAPI) {
 					);
 				}
 				if (results.length > 0) cacheSet(cacheKey, { results: results as SearchResult[], engines });
+				// surface gated-out rows in the header so the model knows what was filtered
+				const gated = Object.entries(stats)
+					.filter(([, s]) => s.kept < s.got)
+					.map(([name, s]) => `${name} ${s.got}→${s.kept} kept`);
 				return {
 					content: [
 						{
 							type: "text",
-							text: `[via ${engines.join(" + ")}]${errors.length ? ` (failed: ${errors.join("; ")})` : ""}\n\n${fmtResults(results)}`,
+							text: `[via ${engines.join(" + ")}${gated.length ? ` · ${gated.join(", ")}` : ""}]${errors.length ? ` (failed: ${errors.join("; ")})` : ""}\n\n${fmtResults(results)}`,
 						},
 					],
-					details: { results, count: results.length, engines, errors, durationMs: Date.now() - started },
+					details: { results, count: results.length, engines, errors, stats, durationMs: Date.now() - started },
 				};
 			} catch (err: any) {
-				if (engine !== "multi") {
-					onUpdate?.({ content: [{ type: "text", text: "…" }], details: { step: "primary engine failed — trying multi…" } });
-					try {
-						const r = await multiSearch(params.query, maxResults, recency, signal);
-						if (r.results.length > 0) {
-							cacheSet(cacheKey, { results: r.results as SearchResult[], engines: r.engines });
-							return {
-								content: [
-									{
-										type: "text",
-										text: `${fmtResults(r.results)}\n\n[primary engine '${engine}' failed: ${err?.message ?? err}]`,
-									},
-								],
-								details: { results: r.results, count: r.results.length, engines: r.engines, durationMs: Date.now() - started },
-							};
-						}
-					} catch {
-						/* fall through */
-					}
-				}
 				return {
 					content: [
 						{

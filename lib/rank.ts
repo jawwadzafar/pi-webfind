@@ -15,7 +15,7 @@ function stem(t: string): string {
 	return t;
 }
 
-function tokenize(s: string): string[] {
+export function tokenize(s: string): string[] {
 	return (s.toLowerCase().match(WORD_RE) ?? []).map(stem).filter((t) => t.length > 0);
 }
 
