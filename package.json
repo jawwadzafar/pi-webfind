@@ -1,7 +1,7 @@
 {
   "name": "pi-webfind",
-  "version": "0.5.2",
-  "description": "Claude Code-style web research for the pi coding agent — WebSearch, query-aware fetch (PDFs, Wayback, site adapters, markdown extraction), Stack Overflow, GitHub, HN, Wikipedia, npm. 100% free, no API keys.",
+  "version": "0.6.0",
+  "description": "Claude Code-style web research for the pi coding agent \u2014 WebSearch, query-aware fetch (PDFs, Wayback, site adapters, markdown extraction), Stack Overflow, GitHub, HN, Wikipedia, npm. 100% free, no API keys.",
   "type": "module",
   "keywords": [
     "pi-package",
