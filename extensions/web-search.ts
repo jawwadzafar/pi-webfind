@@ -81,6 +81,22 @@ interface Theme {
  *     ⎿ via ddg · (ctrl+o to expand)
  * Green dot marks state, live ticking elapsed while running.
  */
+// Status-aware dot (Claude Code parity): dim while running, red on error,
+// green on success. Truecolor only when the terminal advertises it —
+// theme.fg() throws on raw hex, so non-truecolor uses theme names.
+const TRUECOLOR =
+	process.env.COLORTERM === "truecolor" || /256color|truecolor/.test(process.env.TERM ?? "");
+const dot = (t: Theme, phase: string | undefined) =>
+	phase === "error"
+		? TRUECOLOR
+			? "\x1b[38;2;255;107;128m⏺ \x1b[39m"
+			: t.fg("error", "⏺ ")
+		: phase === "ok"
+			? TRUECOLOR
+				? "\x1b[38;2;78;186;101m⏺ \x1b[39m"
+				: t.fg("success", "⏺ ")
+			: t.fg("dim", "⏺ ");
+
 function makeRenderers(
 	toolName: string,
 	argDetail: (args: any) => string,
@@ -96,9 +112,9 @@ function makeRenderers(
 			}
 			const text = (context.lastComponent as Text | undefined) ?? new Text("", 0, 0);
 			text.setText(
-				t.fg("success", "⏺ ") +
+				dot(t, context.state.phase) +
 					t.fg("toolTitle", t.bold(toolName)) +
-					t.fg("dim", `(${JSON.stringify(clip(String(argDetail(args ?? {})), 70))})`),
+					t.fg("text", `(${JSON.stringify(clip(String(argDetail(args ?? {})), 70))})`),
 			);
 			return text;
 		},
@@ -112,9 +128,19 @@ function makeRenderers(
 			const text = (context.lastComponent as Text | undefined) ?? new Text("", 0, 0);
 			const state = context.state ?? {};
 
-			// live elapsed ticking while partial (1s interval, like pi's bash renderer)
+			// live elapsed ticking while partial (1s interval, like pi's bash renderer);
+			// unref'd so it can't hold the process, and self-cleaning when the row is
+			// dropped by /new or compaction (lastComponent falsy)
 			if (state.startedAt !== undefined && options.isPartial && !state.interval) {
-				state.interval = setInterval(() => context.invalidate?.(), 1000);
+				state.interval = setInterval(() => {
+					if (!context.lastComponent) {
+						clearInterval(state.interval);
+						state.interval = undefined;
+						return;
+					}
+					context.invalidate?.();
+				}, 1000);
+				state.interval.unref?.();
 			}
 			if (!options.isPartial && state.interval) {
 				clearInterval(state.interval);
@@ -122,13 +148,21 @@ function makeRenderers(
 			}
 
 			if (options.isPartial) {
-				const step = result?.details?.status ?? "Searching…";
+				if (state.phase !== "running") {
+					state.phase = "running";
+					context.invalidate?.();
+				}
+				const step = result?.details?.step ?? "Searching…";
 				const elapsed = state.startedAt !== undefined ? secs(Date.now() - state.startedAt) : "";
 				text.setText(t.fg("warning", `  ⎿ ${step}${elapsed ? ` · ${elapsed}` : ""}`));
 				return text;
 			}
 
 			const isError = result?.isError || result?.details?.error;
+			if (state.phase !== (isError ? "error" : "ok")) {
+				state.phase = isError ? "error" : "ok";
+				context.invalidate?.();
+			}
 			if (isError) {
 				const msg = result?.details?.error ?? result?.content?.[0]?.text ?? "failed";
 				text.setText(t.fg("error", `  ⎿ ${clip(String(msg), 160)}`));
@@ -192,7 +226,7 @@ function registerSearchTool(
 			const started = Date.now();
 			onUpdate?.({
 				content: [{ type: "text", text: `${label}…` }],
-				details: { status: `Searching ${JSON.stringify(clip(params.query, 50))}…` },
+				details: { step: `Searching ${JSON.stringify(clip(params.query, 50))}…` },
 			});
 			try {
 				const results = await run(params.query, MAX(params.max), signal);
@@ -224,10 +258,14 @@ export default function (pi: ExtensionAPI) {
 			"Use for news, articles, broad topics. Use fetch_page to read a result in full. " +
 			"engine='multi' merges both engines in parallel for best coverage. " +
 			"For research questions, run 2-3 queries with varied phrasings (add a year, quote the exact error, add 'docs' or 'github'); " +
-			"set deep:true when you need facts rather than links; prefer recent results for fast-moving topics and cite the date you relied on.",
+			"set deep:true when you need facts rather than links — often removes the need for fetch_page; " +
+			"prefer recent results for fast-moving topics and cite the date you relied on.",
 		promptSnippet: "Free multi-engine web search (DDG + Brave) with recency filter",
 		promptGuidelines: [
-			"Use web tools when the question depends on current or external information the user hasn't provided; don't search for stable knowledge you already know.",
+			"For multi-facet questions (comparisons, 'X vs Y', ecosystem scans), run 2-3 differently-phrased web_search calls in one turn instead of one; dedupe URLs, then fetch_page only the 1-2 results that actually answer the question.",
+			"Prefer deep:true over separate fetch_page calls when you need facts from several results; it returns excerpts inline in one round-trip.",
+			"Never fetch URLs the user must authenticate to (their email, admin panels, private dashboards) — even private-looking hostnames are rejected by SSRF protection; ask the user to paste the content instead.",
+			"Use fetch_page for a specific URL; use web_search first when you'd have to guess the URL.",
 		],
 		parameters: Type.Object({
 			query: Type.String({ description: "Search query" }),
@@ -238,7 +276,7 @@ export default function (pi: ExtensionAPI) {
 			deep: Type.Optional(
 				Type.Union([Type.Boolean(), Type.Number()], {
 					description:
-						"Read the top results and attach a query-relevant excerpt to each. true = 4 results; or a number 1-8. Use when you need facts, not just links — often removes the need for fetch_page.",
+						"Read the top results and attach a query-relevant excerpt to each. true = 4 results; or a number 1-8. Use when you need facts, not just links.",
 				}),
 			),
 		}),
@@ -253,24 +291,24 @@ export default function (pi: ExtensionAPI) {
 			const cacheKey = `s:${engine}:${recency ?? ""}:${maxResults}:${params.query}:deep${deepN}`;
 			const run = async () => {
 				if (engine === "multi") {
-					onUpdate?.({ content: [{ type: "text", text: "…" }], details: { status: "querying ddg + brave in parallel…" } });
+					onUpdate?.({ content: [{ type: "text", text: "…" }], details: { step: "querying ddg + brave in parallel…" } });
 					const r = await multiSearch(params.query, maxResults, recency, signal);
 					return { results: r.results as Row[], engines: r.engines, errors: r.errors };
 				}
 				if (engine === "brave") {
-					onUpdate?.({ content: [{ type: "text", text: "…" }], details: { status: "querying brave…" } });
+					onUpdate?.({ content: [{ type: "text", text: "…" }], details: { step: "querying brave…" } });
 					return { results: (await braveSearch(params.query, maxResults, recency, signal)) as Row[], engines: ["brave"], errors: [] as string[] };
 				}
 				if (engine === "bing") {
-					onUpdate?.({ content: [{ type: "text", text: "…" }], details: { status: "querying bing rss…" } });
+					onUpdate?.({ content: [{ type: "text", text: "…" }], details: { step: "querying bing rss…" } });
 					return { results: (await bingRssSearch(params.query, maxResults, recency, signal)) as Row[], engines: ["bing"], errors: [] as string[] };
 				}
-				onUpdate?.({ content: [{ type: "text", text: "…" }], details: { status: "querying duckduckgo…" } });
+				onUpdate?.({ content: [{ type: "text", text: "…" }], details: { step: "querying duckduckgo…" } });
 				try {
 					return { results: (await ddgSearch(params.query, maxResults, recency, signal)) as Row[], engines: ["ddg"], errors: [] as string[] };
 				} catch (err) {
 					// ddg fully failed — structured bing rss before giving up
-					onUpdate?.({ content: [{ type: "text", text: "…" }], details: { status: "ddg failed — trying bing rss…" } });
+					onUpdate?.({ content: [{ type: "text", text: "…" }], details: { step: "ddg failed — trying bing rss…" } });
 					return { results: (await bingRssSearch(params.query, maxResults, recency, signal)) as Row[], engines: ["bing"], errors: [String((err as Error)?.message ?? err)] };
 				}
 			};
@@ -281,8 +319,8 @@ export default function (pi: ExtensionAPI) {
 					if (hit) {
 						cachedHit = true;
 						return {
-							content: [{ type: "text", text: `[cached]\n${fmtResults(hit)}` }],
-							details: { cached: true, results: hit, count: hit.length, durationMs: Date.now() - started },
+							content: [{ type: "text", text: `[cached]\n${fmtResults(hit.results)}` }],
+							details: { cached: true, results: hit.results, engines: hit.engines, count: hit.results.length, durationMs: Date.now() - started },
 						};
 					}
 				}
@@ -291,7 +329,7 @@ export default function (pi: ExtensionAPI) {
 				if (deepN > 0 && results.length > 0 && !cachedHit) {
 					onUpdate?.({
 						content: [{ type: "text", text: "…" }],
-						details: { status: `reading top ${Math.min(deepN, results.length)} results for excerpts…` },
+						details: { step: `reading top ${Math.min(deepN, results.length)} results for excerpts…` },
 					});
 					const top = results.slice(0, deepN);
 					const deadline = Date.now() + 25_000;
@@ -328,7 +366,7 @@ export default function (pi: ExtensionAPI) {
 						}),
 					);
 				}
-				if (results.length > 0) cacheSet(cacheKey, results as SearchResult[]); // Row ⊇ SearchResult display-wise; cache widened in WP-04
+				if (results.length > 0) cacheSet(cacheKey, { results: results as SearchResult[], engines });
 				return {
 					content: [
 						{
@@ -340,11 +378,11 @@ export default function (pi: ExtensionAPI) {
 				};
 			} catch (err: any) {
 				if (engine !== "multi") {
-					onUpdate?.({ content: [{ type: "text", text: "…" }], details: { status: "primary engine failed — trying multi…" } });
+					onUpdate?.({ content: [{ type: "text", text: "…" }], details: { step: "primary engine failed — trying multi…" } });
 					try {
 						const r = await multiSearch(params.query, maxResults, recency, signal);
 						if (r.results.length > 0) {
-							cacheSet(cacheKey, r.results);
+							cacheSet(cacheKey, { results: r.results as SearchResult[], engines: r.engines });
 							return {
 								content: [
 									{
@@ -375,7 +413,7 @@ export default function (pi: ExtensionAPI) {
 			"Web Search",
 			(args) => String(args.query ?? ""),
 			(d) => {
-				const eng = (d.engines ?? []).join(" + ") || (d.cached ? "cache" : "ddg");
+				const eng = (d.engines ?? []).join(" + ") || (d.cached ? "cache" : "");
 				const line1 = `Found ${d.count ?? 0} results in ${secs(d.durationMs ?? 0)}`;
 				const line2 = d.cached
 					? `via cache · ${eng}`
@@ -395,7 +433,9 @@ export default function (pi: ExtensionAPI) {
 			"Fetch a URL and return readable content. Handles HTML (article extraction, nav/ads stripped), " +
 			"JSON (pretty-printed), plain text, and PDFs (text extraction). On 401/403/429/503 automatically " +
 			"retries via the Wayback Machine; thin/SPA pages re-rendered via a reader proxy. SSRF-protected. " +
-				"Pass query to get the most relevant passages of a long page instead of its head. Cached 1h.",
+			"Pass query to get the most relevant passages of a long page instead of its head. Cached 1h. " +
+			"no_jina=true opts out of the reader proxy (raw HTML only, e.g. for JSON/text or when the " +
+			"reader proxy would leak custom headers).",
 		promptSnippet: "Fetch a URL → readable text; handles PDFs, JSON, bot-walls (Wayback fallback)",
 		parameters: Type.Object({
 			url: Type.String({ description: "URL to fetch (http/https only)" }),
@@ -427,7 +467,7 @@ export default function (pi: ExtensionAPI) {
 			const started = Date.now();
 			try {
 				const u = new URL(params.url);
-				onUpdate?.({ content: [{ type: "text", text: "…" }], details: { status: `fetching ${u.host}…` } });
+				onUpdate?.({ content: [{ type: "text", text: "…" }], details: { step: `fetching ${u.host}…` } });
 				const r = await smartFetch(params.url, {
 					query: (params.query as string | undefined)?.trim() || undefined,
 					maxChars: MAX(params.max_chars, 8000, 50_000),
@@ -437,6 +477,7 @@ export default function (pi: ExtensionAPI) {
 					waybackEnabled: !params.no_wayback,
 					allowHttpErrors: params.allow_http_errors,
 					jinaEnabled: params.no_jina === true ? false : undefined,
+					jinaQuery: (params.query as string | undefined)?.trim() || undefined,
 					signal,
 				} satisfies FetchOptions);
 				const tags = [
@@ -477,6 +518,7 @@ export default function (pi: ExtensionAPI) {
 				if (d.source && d.source !== "direct") bits.push(`via ${d.source}`);
 				if (d.fromCache) bits.push("cached");
 				if (d.truncated) bits.push("truncated");
+				if ((d.notes ?? []).length > 0) bits.push(...d.notes);
 				return { ok: !d.error, line1, line2: bits.join(" · "), rows: undefined, preview: d.preview };
 			},
 		),
@@ -543,7 +585,7 @@ export default function (pi: ExtensionAPI) {
 		}),
 		async execute(_id, params, signal, onUpdate) {
 			const started = Date.now();
-			onUpdate?.({ content: [{ type: "text", text: "…" }], details: { status: "searching github…" } });
+			onUpdate?.({ content: [{ type: "text", text: "…" }], details: { step: "searching github…" } });
 			try {
 				const token = process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
 				const results = await searchGithubRepos(params.query, MAX(params.max), signal, token);
@@ -572,7 +614,10 @@ export default function (pi: ExtensionAPI) {
 		handler: async (args, ctx) => {
 			const topic = (args ?? "").trim();
 			if (!topic) {
-				ctx.ui.notify("Usage: /research <topic>", "warning");
+				ctx.ui.notify(
+					"Usage: /research <topic> — the model is prompted to answer your actual question, not just summarize the topic",
+					"warning",
+				);
 				return;
 			}
 			const setStatus = (s: string) => {
@@ -638,7 +683,7 @@ export default function (pi: ExtensionAPI) {
 			const pages: Array<{ title: string; url: string; text: string }> = [];
 			for (const p of picked) {
 				try {
-					const r = await smartFetch(p.url, { maxChars: 4000, timeoutMs: 15_000 });
+					const r = await smartFetch(p.url, { maxChars: 12_000, timeoutMs: 30_000 });
 					pages.push({ title: p.title, url: p.url, text: r.text });
 					steps.push(`✓ fetched: ${clip(new URL(p.url).host, 40)}`);
 				} catch (e: any) {
@@ -659,11 +704,14 @@ export default function (pi: ExtensionAPI) {
 					material += `### ${p.title}\n${p.url}\n\n${p.text}\n\n`;
 				}
 			}
-			material += `---\nSynthesize the above into a research briefing:
-- Group findings by sub-topic (like "three-way comparisons", "benchmarks", etc.)
-- For each group, list the documents worth reading: [source name](url) — one line on what it covers
+			material += `---\nThe user asked: "${topic.replace(/`/g, "'")}"
+
+Synthesize the above into a research briefing that ANSWERS THIS QUESTION:
+- Lead with the best current answer supported by the material, with citations
+- Then group findings by sub-topic (like "three-way comparisons", "benchmarks", etc.)
+- For each group, list documents worth reading: [source name](url) — one line on what it covers
 - End with "Recurring conclusions": 3-6 bullets of the consensus/tensions across sources
-- Cite only what appears above; if sources are thin, say so.`;
+- Cite only what appears above; if sources are thin or don't address the question, say so explicitly.`;
 
 			pi.sendUserMessage(material);
 			setWidget([...steps, "handed to model for synthesis"]);

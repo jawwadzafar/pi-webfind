@@ -377,13 +377,20 @@ export async function multiSearch(
 const CACHE_TTL = 10 * 60 * 1000;
 const cache = createDiskBackedCache({ name: "search", maxEntries: 256, ttlMs: CACHE_TTL });
 
-export function cacheGet(key: string): SearchResult[] | null {
-	const hit = cache.get(key);
-	return Array.isArray(hit) && hit.length > 0 ? (hit as SearchResult[]) : null;
+export interface CachedSearch {
+	results: SearchResult[];
+	engines: string[];
 }
 
-export function cacheSet(key: string, value: SearchResult[]) {
-	if (value.length > 0) cache.set(key, value);
+export function cacheGet(key: string): CachedSearch | null {
+	const hit = cache.get(key);
+	if (Array.isArray(hit)) return hit.length > 0 ? { results: hit as SearchResult[], engines: [] } : null; // legacy bare-array shape
+	const c = hit as CachedSearch | null;
+	return c && c.results.length > 0 ? c : null;
+}
+
+export function cacheSet(key: string, value: CachedSearch) {
+	if (value.results.length > 0) cache.set(key, value);
 }
 
 // ----------------------------------------------------- page text extraction

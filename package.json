@@ -20,13 +20,6 @@
     "type": "git",
     "url": "git+https://github.com/jawwadzafar/pi-webfind.git"
   },
-  "pi": {
-    "extensions": [
-      "./extensions"
-    ],
-    "image": "https://jawwadzafar.github.io/pi-webfind/screenshot.png",
-    "video": "https://jawwadzafar.github.io/pi-webfind/demo.mp4"
-  },
   "scripts": {
     "test": "node --test tests/*.test.ts",
     "typecheck": "tsc --noEmit",
@@ -48,7 +41,8 @@
     "extensions/",
     "lib/",
     "README.md",
-    "LICENSE"
+    "LICENSE",
+    "themes/"
   ],
   "engines": {
     "node": ">=20"
@@ -57,5 +51,10 @@
   "homepage": "https://jawwadzafar.github.io/pi-webfind",
   "bugs": {
     "url": "https://github.com/jawwadzafar/pi-webfind/issues"
+  },
+  "pi": {
+    "themes": [
+      "./themes"
+    ]
   }
 }

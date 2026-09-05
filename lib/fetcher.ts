@@ -34,6 +34,8 @@ export interface FetchOptions {
 	allowHttpErrors?: boolean;
 	/** opt out of the r.jina.ai reader fallback for this call (default: enabled) */
 	jinaEnabled?: boolean;
+	/** query forwarded to the reader proxy (X-Query header) for targeted extraction */
+	jinaQuery?: string;
 	signal?: AbortSignal;
 }
 
@@ -200,7 +202,11 @@ async function jinaFetchText(url: URL, opts: FetchOptions, contentType?: string)
 		const timeout = AbortSignal.timeout(30_000);
 		const combined = opts.signal ? AbortSignal.any([opts.signal, timeout]) : timeout;
 		const res = await fetch(`https://r.jina.ai/${url.href}`, {
-			headers: { "User-Agent": TOOL_UA, Accept: "text/plain" },
+			headers: {
+				"User-Agent": TOOL_UA,
+				Accept: "text/plain",
+				...(opts.jinaQuery ? { "X-Query": opts.jinaQuery } : {}),
+			},
 			signal: combined,
 		});
 		if (!res.ok) return null;
