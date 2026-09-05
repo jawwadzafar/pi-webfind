@@ -12,7 +12,7 @@
  * (JSON snapshot under ~/.pi/agent/cache/webfind, 10 min TTL).
  */
 import { createDiskBackedCache } from "./cache.ts";
-import { hostCooldownUntil, setHostCooldown } from "./net.ts";
+import { hostCooldownUntil, setHostCooldown, jinaAuth } from "./net.ts";
 import { tokenize } from "./rank.ts";
 
 const UA =
@@ -235,7 +235,7 @@ export type Recency = "d" | "w" | "m" | "y" | undefined;
  * and can relay search-engine HTML when our direct requests get walled.
  * Rate limit (keyless): ~20 req/min per IP — only used as fallback.
  */
-const JINA_RATE_MS = 3_500;
+const JINA_RATE_MS = process.env.JINA_API_KEY ? 300 : 3_500; // key: ~20 → ~200 rpm
 let lastJina = 0;
 
 async function jinaGet(url: string, signal?: AbortSignal): Promise<string> {
@@ -245,7 +245,7 @@ async function jinaGet(url: string, signal?: AbortSignal): Promise<string> {
 	const timeout = AbortSignal.timeout(30_000);
 	const combined = signal ? AbortSignal.any([signal, timeout]) : timeout;
 	const res = await fetch(`https://r.jina.ai/${url}`, {
-		headers: { "User-Agent": TOOL_UA, Accept: "text/plain" },
+		headers: { "User-Agent": TOOL_UA, Accept: "text/plain", ...jinaAuth() },
 		signal: combined,
 	});
 	if (!res.ok) throw new Error(`jina HTTP ${res.status}`);
@@ -592,6 +592,85 @@ export async function searchRace(
 	return { results: fuse(buckets, maxResults), engines: buckets.map((b) => b.name), errors, stats };
 }
 
+// ------------------------------------------------- optional accelerator keys
+
+/** Brave's official API (JSON) — free tier with BRAVE_API_KEY; throws when unset. */
+export async function braveApiSearch(
+	query: string,
+	maxResults: number,
+	recency: Recency,
+	signal?: AbortSignal,
+	lang?: string,
+): Promise<SearchResult[]> {
+	const key = process.env.BRAVE_API_KEY;
+	if (!key) throw new Error("BRAVE_API_KEY not set");
+	const params = new URLSearchParams({ q: query, count: String(Math.min(maxResults, 20)) });
+	if (recency) {
+		const map: Record<string, string> = { d: "pd", w: "pw", m: "pm", y: "py" };
+		params.set("tf", map[recency]!);
+	}
+	if (lang) params.set("country", toBraveCountry(lang));
+	const res = await fetch(`https://api.search.brave.com/res/v1/web/search?${params}`, {
+		headers: { Accept: "application/json", "X-Subscription-Token": key },
+		signal: AbortSignal.any(signal ? [signal, AbortSignal.timeout(TIMEOUT_MS)] : [AbortSignal.timeout(TIMEOUT_MS)]),
+	});
+	if (!res.ok) throw new Error(`brave api HTTP ${res.status}`);
+	const data = (await res.json()) as { web?: { results?: Array<{ title: string; url: string; description?: string; age?: string }> } };
+	return (data.web?.results ?? []).slice(0, maxResults).map((r) => ({
+		title: decodeEntities(r.title), url: r.url, snippet: decodeEntities(r.description ?? ""), engine: "brave-api",
+	}));
+}
+
+/** Tavily search API — free tier with TAVILY_API_KEY; throws when unset. */
+export async function tavilySearch(
+	query: string,
+	maxResults: number,
+	recency: Recency,
+	signal?: AbortSignal,
+): Promise<SearchResult[]> {
+	const key = process.env.TAVILY_API_KEY;
+	if (!key) throw new Error("TAVILY_API_KEY not set");
+	const body: Record<string, unknown> = { query, max_results: Math.min(maxResults, 20) };
+	if (recency) body.topic = recency === "d" ? "news" : "general";
+	const res = await fetch("https://api.tavily.com/search", {
+		method: "POST",
+		headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
+		body: JSON.stringify(body),
+		signal: AbortSignal.any(signal ? [signal, AbortSignal.timeout(TIMEOUT_MS)] : [AbortSignal.timeout(TIMEOUT_MS)]),
+	});
+	if (!res.ok) throw new Error(`tavily HTTP ${res.status}`);
+	const data = (await res.json()) as { results?: Array<{ title: string; url: string; content?: string }> };
+	return (data.results ?? []).slice(0, maxResults).map((r) => ({
+		title: decodeEntities(r.title), url: r.url, snippet: decodeEntities(r.content ?? ""), engine: "tavily",
+	}));
+}
+
+/** Jina reader-based search API — free tier with JINA_API_KEY; throws when unset. */
+export async function jinaSearchApi(
+	query: string,
+	maxResults: number,
+	signal?: AbortSignal,
+): Promise<SearchResult[]> {
+	const key = process.env.JINA_API_KEY;
+	if (!key) throw new Error("JINA_API_KEY not set");
+	const res = await fetch("https://s.jina.ai/", {
+		method: "POST",
+		headers: {
+			"Content-Type": "application/json",
+			Accept: "application/json",
+			...jinaAuth(),
+		},
+		body: JSON.stringify({ query: [query] }),
+		signal: AbortSignal.any(signal ? [signal, AbortSignal.timeout(30_000)] : [AbortSignal.timeout(30_000)]),
+	});
+	if (!res.ok) throw new Error(`jina search HTTP ${res.status}`);
+	const data = (await res.json()) as { data?: Array<{ title?: string; url: string; description?: string; content?: string }> };
+	return (data.data ?? []).slice(0, maxResults).map((r) => ({
+		title: decodeEntities(r.title ?? r.url), url: r.url,
+		snippet: decodeEntities((r.description ?? r.content ?? "").slice(0, 300)), engine: "jina-search",
+	}));
+}
+
 /** Run several engines in parallel; gate, RRF-fuse by normalized URL, merge fields. */
 export async function multiSearch(
 	query: string,
@@ -600,11 +679,15 @@ export async function multiSearch(
 	signal?: AbortSignal,
 	lang?: string,
 ): Promise<SearchOutcome> {
-	const attempts: Array<{ name: string; fn: () => Promise<SearchResult[]> }> = [
+	const attempts: Array<{ name: string; fn: () => Promise<SearchResult[]> }> = [];
+	if (process.env.TAVILY_API_KEY) attempts.push({ name: "tavily", fn: () => tavilySearch(query, 15, recency, signal) });
+	if (process.env.JINA_API_KEY) attempts.push({ name: "jina-search", fn: () => jinaSearchApi(query, 15, signal) });
+	if (process.env.BRAVE_API_KEY) attempts.push({ name: "brave-api", fn: () => braveApiSearch(query, 15, recency, signal, lang) });
+	attempts.push(
 		{ name: "ddg", fn: () => ddgSearch(query, 15, recency, signal, lang) },
 		{ name: "brave", fn: () => braveSearch(query, 15, recency, signal, lang) },
 		{ name: "bing", fn: () => bingRssSearch(query, 15, recency, signal, lang) },
-	];
+	);
 	const settled = await Promise.allSettled(attempts.map((a) => a.fn()));
 	const namedBuckets: Array<{ name: string; rows: SearchResult[] }> = [];
 	const engines: string[] = [];

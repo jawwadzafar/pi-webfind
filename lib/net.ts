@@ -67,11 +67,18 @@ export function noteNotFound(host: string): void {
 
 /** Wait so that consecutive r.jina.ai requests stay ≥ `JINA_RATE_MS` apart. Single shared gap. */
 let lastJinaCall = 0;
-export const JINA_RATE_MS = 3_500;
+/** With a free JINA_API_KEY the reader relay allows ~200 rpm instead of ~20 — throttle accordingly. */
+export const JINA_RATE_MS = process.env.JINA_API_KEY ? 300 : 3_500;
 export async function jinaGap(signal?: AbortSignal): Promise<void> {
 	const wait = lastJinaCall + JINA_RATE_MS - Date.now();
 	if (wait > 0) await sleep(wait, signal);
 	lastJinaCall = Date.now();
+}
+
+/** Authorization header for r.jina.ai when JINA_API_KEY is set (raises the rate cap). */
+export function jinaAuth(): Record<string, string> {
+	const key = process.env.JINA_API_KEY;
+	return key ? { Authorization: `Bearer ${key}` } : {};
 }
 
 function sleep(ms: number, signal?: AbortSignal): Promise<void> {

@@ -8,7 +8,7 @@ import { extractDate, htmlToMarkdown } from "./extract.ts";
 import { topPassages, type PickedPassage } from "./rank.ts";
 import { extractPdf } from "./pdf.ts";
 import { assertSafeUrl, resolveSafe } from "./safe.ts";
-import { assertOnline, hostCooldownUntil, jinaGap, markOnline, noteNotFound, setHostCooldown } from "./net.ts";
+import { assertOnline, hostCooldownUntil, jinaGap, markOnline, noteNotFound, setHostCooldown, jinaAuth } from "./net.ts";
 
 export const UA =
 	"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
@@ -214,6 +214,7 @@ async function jinaFetchText(url: URL, opts: FetchOptions, contentType?: string)
 			headers: {
 				"User-Agent": TOOL_UA,
 				Accept: "text/plain",
+				...jinaAuth(),
 				...(opts.jinaQuery ? { "X-Query": opts.jinaQuery } : {}),
 			},
 			signal: opts.signal,

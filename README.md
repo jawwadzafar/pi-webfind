@@ -106,8 +106,20 @@ with it:
 - **Never executes or writes fetched content**; it reads URLs and returns text
 - Politeness throttle per host; fake-browser UA only where required, honest
   `pi-webfind/x.y` UA everywhere it matters
-- The only optional credential is `GITHUB_TOKEN` (lifts GitHub's 10 req/min
-  anonymous limit). Everything else is keyless by design.
+- The only optional credentials are listed below. Everything else is keyless by design.
+
+## Optional accelerators (still fully free without them)
+
+| Env var | Effect when set | Without it |
+| --- | --- | --- |
+| `GITHUB_TOKEN` | Lifts GitHub API from 10 to ~30 req/min in site adapters | 10 req/min anonymous |
+| `JINA_API_KEY` | Reader relay throttle 3.5 s → 300 ms; enables `s.jina.ai` search leg in `engine:"multi"` | 3.5 s gap, no jina search leg |
+| `BRAVE_API_KEY` | Adds Brave's official JSON API as the first `engine:"multi"` attempt | scraped Brave only |
+| `TAVILY_API_KEY` | Adds Tavily as a `engine:"multi"` attempt | no Tavily |
+
+Every var is optional; with none set, behavior is identical to the baseline:
+keyless scraping with the fallback ladder. Keys are never required and never
+sent anywhere except their own API host.
 
 ## Limits (be honest about free)
 
