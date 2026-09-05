@@ -19,6 +19,8 @@ jobs:
         with:
           node-version: 22
           cache: npm
+      - name: Install dependencies (dev types for typecheck)
+        run: npm ci
       - name: Typecheck
         # npm exec --package (not `npx pkg cmd`): typescript's manifest has two bins
         # (tsc, tsserver) and npx's auto-bin-pick can't disambiguate — "could not
